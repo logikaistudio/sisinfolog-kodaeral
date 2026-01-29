@@ -719,12 +719,24 @@ a:hover {
 
 .stats-grid {
   display: grid;
-  /* Changed from repeats(auto-fit, minmax(250px, 1fr)) to 1 row layout (4 cols) */
-  grid-template-columns: repeat(4, 1fr);
-  /* Reduced gap from lg (1.5rem) to md (1rem) (~33% reduction) */
+  /* Mobile: 1 column */
+  grid-template-columns: 1fr;
   gap: var(--spacing-md);
-  /* Reduced margin from xl (2rem) to lg (1.5rem) */
   margin-bottom: var(--spacing-lg);
+}
+
+@media (min-width: 640px) {
+  .stats-grid {
+    /* Tablet: 2 columns */
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .stats-grid {
+    /* Desktop: 4 columns (1 row) */
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 
 .stat-card {
@@ -776,5 +788,48 @@ a:hover {
 @media (max-width: 768px) {
   .mobile-menu-btn {
     display: block;
+  }
+
+  /* Force sidebar to be full width on mobile even if collapsed state is active in state */
+  .sidebar,
+  .sidebar.collapsed {
+    width: var(--sidebar-width) !important;
+  }
+
+  /* Ensure labels are visible on mobile */
+  .sidebar.collapsed .nav-label {
+    display: block !important;
+  }
+
+  /* Ensure footer is visible on mobile */
+  .sidebar.collapsed .sidebar-footer {
+    display: block !important;
+  }
+
+  /* Hide title on mobile if strictly needed, but usually we want it */
+  .sidebar.collapsed .sidebar-title {
+    display: flex !important;
+  }
+
+  /* Adjust Toolbar layout for mobile */
+  .flex.justify-between {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-md);
+  }
+
+  .flex.justify-between>.flex {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .flex.justify-between input,
+  .flex.justify-between select,
+  .flex.justify-between button {
+    width: 100% !important;
+  }
+
+  .flex.gap-md {
+    flex-direction: column;
   }
 }
