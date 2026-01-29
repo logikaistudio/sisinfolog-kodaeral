@@ -785,33 +785,53 @@ a:hover {
   box-shadow: var(--shadow-lg);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .mobile-menu-btn {
     display: block;
   }
 
-  /* Force sidebar to be full width on mobile even if collapsed state is active in state */
+  /* SIDEBAR BEHAVIOR FOR MOBILE/TABLET */
+  /* Default state: hidden (off-canvas) */
   .sidebar,
   .sidebar.collapsed {
+    transform: translateX(-100%);
     width: var(--sidebar-width) !important;
+    position: fixed;
+    z-index: 2000;
   }
 
-  /* Ensure labels are visible on mobile */
-  .sidebar.collapsed .nav-label {
+  /* Open state: slide in */
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  /* When open, ensure all elements are visible (ignore collapsed state logic) */
+  .sidebar.mobile-open .nav-label,
+  .sidebar.mobile-open .sidebar-title,
+  .sidebar.mobile-open .sidebar-footer {
     display: block !important;
+    /* Force show labels */
   }
 
-  /* Ensure footer is visible on mobile */
-  .sidebar.collapsed .sidebar-footer {
-    display: block !important;
-  }
-
-  /* Hide title on mobile if strictly needed, but usually we want it */
-  .sidebar.collapsed .sidebar-title {
+  .sidebar.mobile-open .sidebar-title {
     display: flex !important;
   }
 
-  /* Adjust Toolbar layout for mobile */
+  /* MAIN CONTENT */
+  /* Always take full width, never margin-left for sidebar since it overlays */
+  .main-content,
+  .main-content.sidebar-collapsed {
+    margin-left: 0 !important;
+  }
+
+  .content-wrapper {
+    padding-top: 60px;
+    /* Add padding for the fixed mobile menu button */
+    padding: var(--spacing-md);
+    padding-top: calc(var(--spacing-md) + 40px);
+  }
+
+  /* TOOLBAR ADAPTATIONS */
   .flex.justify-between {
     flex-direction: column;
     align-items: stretch;
