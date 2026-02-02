@@ -1,12 +1,26 @@
-const pkg = require('pg');
+import pkg from 'pg';
 const { Pool } = pkg;
-require('dotenv').config();
+import dotenv from 'dotenv';
+dotenv.config();
 
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false
+// Create a pool instance only if DATABASE_URL is provided, otherwise log error
+// This prevents immediate crash on module load if env var is missing, 
+// allowing the health check to report the specific error instead.
+let pool;
+
+try {
+    if (!process.env.DATABASE_URL) {
+        console.error("DATABASE_URL is undefined!");
     }
-});
 
-module.exports = pool;
+    pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: {
+            rejectUnauthorized: false
+        }
+    });
+} catch (error) {
+    console.error("Failed to create DB pool:", error);
+}
+
+export default pool;

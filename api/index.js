@@ -1,6 +1,6 @@
-const express = require('express');
-const cors = require('cors');
-const pool = require('./db.js');
+import express from 'express';
+import cors from 'cors';
+import pool from './db.js';
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -11,6 +11,9 @@ app.use(express.json());
 // Health Check / DB Connection Test
 app.get('/api/health', async (req, res) => {
     try {
+        if (!pool) {
+            throw new Error("Database pool not initialized. Check DATABASE_URL.");
+        }
         const result = await pool.query('SELECT NOW()');
         res.json({
             status: 'ok',
@@ -22,7 +25,8 @@ app.get('/api/health', async (req, res) => {
         res.status(500).json({
             status: 'error',
             message: 'Database connection failed',
-            error: err.message
+            error: err.message,
+            env_check: process.env.DATABASE_URL ? "Variable Present" : "Variable Missing"
         });
     }
 });
@@ -118,10 +122,12 @@ app.post('/api/harpan', async (req, res) => {
     }
 });
 
+// For local dev
 if (process.env.NODE_ENV !== 'production') {
     app.listen(port, () => {
         console.log(`Server running on port ${port}`);
     });
 }
 
-module.exports = app;
+// Export app for Vercel
+export default app;
