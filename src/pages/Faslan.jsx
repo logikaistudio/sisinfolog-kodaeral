@@ -11,8 +11,11 @@ function Faslan({ type }) {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const endpoint = type === 'tanah' ? 'http://localhost:3001/api/assets/tanah' : 'http://localhost:3001/api/assets/bangunan'
-                const response = await fetch(endpoint)
+                const endpoint = type === 'tanah' ? '/api/assets/tanah' : '/api/assets/bangunan'
+                // Using relative path for Vercel/Proxy compatibility, fallback to localhost if needed in dev without proxy
+                const finalEndpoint = import.meta.env.PROD ? endpoint : `http://localhost:3001${endpoint}`
+
+                const response = await fetch(finalEndpoint)
                 const result = await response.json()
                 setData(result)
             } catch (error) {
@@ -77,8 +80,8 @@ function Faslan({ type }) {
         const wb = utils.book_new();
         utils.book_append_sheet(wb, ws, "Template Import");
 
-        // Download file
-        writeFile(wb, "Template_Import_Aset.xlsx");
+        // Download file as .xls
+        writeFile(wb, "Template_Import_Aset.xls", { bookType: 'xls' });
     };
 
     const handleFileUpload = async (e) => {
@@ -128,7 +131,7 @@ function Faslan({ type }) {
             })
 
             // Post to backend
-            const endpoint = 'http://localhost:3001/api/assets/tanah'
+            const endpoint = import.meta.env.PROD ? '/api/assets/tanah' : 'http://localhost:3001/api/assets/tanah'
 
             for (const item of formattedData) {
                 await fetch(endpoint, {
@@ -141,7 +144,8 @@ function Faslan({ type }) {
             }
 
             // Refresh data
-            const response = await fetch(endpoint)
+            const refreshEndpoint = import.meta.env.PROD ? '/api/assets/tanah' : 'http://localhost:3001/api/assets/tanah'
+            const response = await fetch(refreshEndpoint)
             const result = await response.json()
             setData(result)
 
@@ -211,11 +215,11 @@ function Faslan({ type }) {
                                 </svg>
                                 Import Excel
                             </button>
-                            <button className="btn btn-outline" onClick={handleDownloadTemplate} title="Download Template Excel">
+                            <button className="btn btn-outline" onClick={handleDownloadTemplate} title="Download Template Excel (.xls)">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                                 </svg>
-                                Template
+                                Template (.xls)
                             </button>
                         </>
                     )}
