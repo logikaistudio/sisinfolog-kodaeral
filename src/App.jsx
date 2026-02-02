@@ -1,16 +1,47 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Sidebar from './components/Sidebar'
+import Login from './pages/Login'
 import PetaFaslan from './pages/PetaFaslan'
 import Faslan from './pages/Faslan'
-import Bekang from './pages/Bekang'
-import Harpan from './pages/Harpan'
+import DisBek from './pages/DisBek'
+import DisAng from './pages/DisAng'
+import Fasharpan from './pages/Fasharpan'
 import MasterData from './pages/MasterData'
+import PengaturanUsers from './pages/PengaturanUsers'
+import PengaturanRoles from './pages/PengaturanRoles'
 import './index.css'
 
 function App() {
+  // Auth state
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+
+  // App state
   const [currentPage, setCurrentPage] = useState('faslan-peta')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+
+  // Check data from storage on load (optional simulation)
+  useEffect(() => {
+    const loggedIn = localStorage.getItem('isLoggedIn')
+    if (loggedIn === 'true') {
+      setIsAuthenticated(true)
+    }
+  }, [])
+
+  const handleLogin = (username) => {
+    setIsAuthenticated(true)
+    localStorage.setItem('isLoggedIn', 'true')
+  }
+
+  const handleLogout = () => {
+    setIsAuthenticated(false)
+    localStorage.removeItem('isLoggedIn')
+  }
+
+  // If not authenticated, show Login page
+  if (!isAuthenticated) {
+    return <Login onLogin={handleLogin} />
+  }
 
   const renderPage = () => {
     switch (currentPage) {
@@ -20,12 +51,18 @@ function App() {
         return <Faslan type="tanah" />
       case 'faslan-bangunan':
         return <Faslan type="bangunan" />
-      case 'bekang':
-        return <Bekang />
-      case 'harpan':
-        return <Harpan />
+      case 'disbek':
+        return <DisBek />
+      case 'disang':
+        return <DisAng />
+      case 'fasharpan':
+        return <Fasharpan />
       case 'masterdata':
         return <MasterData />
+      case 'pengaturan-users':
+        return <PengaturanUsers />
+      case 'pengaturan-roles':
+        return <PengaturanRoles />
       default:
         return <PetaFaslan />
     }
@@ -58,6 +95,7 @@ function App() {
         setCollapsed={setSidebarCollapsed}
         mobileOpen={mobileSidebarOpen}
         setMobileOpen={setMobileSidebarOpen}
+        onLogout={handleLogout}
       />
 
       {/* Main Content */}

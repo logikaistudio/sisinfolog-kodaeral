@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types'
 import { useState } from 'react'
 
-function Sidebar({ currentPage, setCurrentPage, collapsed, setCollapsed, mobileOpen, setMobileOpen }) {
+function Sidebar({ currentPage, setCurrentPage, collapsed, setCollapsed, mobileOpen, setMobileOpen, onLogout }) {
     const [expandedMenus, setExpandedMenus] = useState(['faslan'])
 
     const menuItems = [
@@ -17,22 +17,38 @@ function Sidebar({ currentPage, setCurrentPage, collapsed, setCollapsed, mobileO
             ]
         },
         {
-            id: 'bekang',
-            label: 'Bekang',
-            icon: '📦',
-            description: 'Bekal Angkutan'
+            id: 'fasharpan',
+            label: 'Fasharpan',
+            icon: '🛠️',
+            description: 'Fasilitas Pemeliharaan & Perbaikan'
         },
         {
-            id: 'harpan',
-            label: 'Harpan',
-            icon: '🛠️',
-            description: 'Data KRI, KAL, KAMLA'
+            id: 'disbek',
+            label: 'DisBek',
+            icon: '📦',
+            description: 'Dinas Perbekalan'
+        },
+        {
+            id: 'disang',
+            label: 'DisAng',
+            icon: '🚛',
+            description: 'Dinas Angkutan'
         },
         {
             id: 'masterdata',
             label: 'Master Data',
             icon: '⚙️',
             description: 'Data Master'
+        },
+        {
+            id: 'pengaturan',
+            label: 'Pengaturan',
+            icon: '🔧',
+            description: 'Pengaturan Sistem',
+            children: [
+                { id: 'pengaturan-users', label: 'Akses Masuk', icon: '👥' },
+                { id: 'pengaturan-roles', label: 'Role Management', icon: '🛡️' }
+            ]
         }
     ]
 
@@ -185,7 +201,8 @@ Sidebar.propTypes = {
     collapsed: PropTypes.bool.isRequired,
     setCollapsed: PropTypes.func.isRequired,
     mobileOpen: PropTypes.bool.isRequired,
-    setMobileOpen: PropTypes.func.isRequired
+    setMobileOpen: PropTypes.func.isRequired,
+    onLogout: PropTypes.func
 }
 
 export default Sidebar
