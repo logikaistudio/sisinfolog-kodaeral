@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types'
 import { useState } from 'react'
 
-function Sidebar({ currentPage, setCurrentPage, collapsed, setCollapsed, mobileOpen, setMobileOpen, onLogout }) {
+function Sidebar({ currentPage, setCurrentPage, collapsed, setCollapsed, mobileOpen, setMobileOpen, onLogout, user }) {
     const [expandedMenus, setExpandedMenus] = useState(['faslan'])
 
     const menuItems = [
@@ -146,50 +146,89 @@ function Sidebar({ currentPage, setCurrentPage, collapsed, setCollapsed, mobileO
                 ))}
             </nav>
 
-            {/* Footer */}
-            {!collapsed && (
-                <div className="sidebar-footer fade-in" style={{
-                    padding: '1rem',
-                    textAlign: 'center',
-                    borderTop: '1px solid rgba(255, 255, 255, 0.05)'
+            {/* Footer - User Profile */}
+            <div className="sidebar-footer fade-in" style={{
+                padding: collapsed ? '12px' : '16px',
+                borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                background: 'rgba(0,0,0,0.1)'
+            }}>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    justifyContent: collapsed ? 'center' : 'flex-start'
                 }}>
+                    {/* User Avatar */}
                     <div style={{
-                        fontSize: '0.85rem',
-                        fontWeight: '600',
-                        color: 'rgba(255, 255, 255, 0.8)',
-                        marginBottom: '4px',
-                        fontFamily: "'Inter', sans-serif"
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '50%',
+                        overflow: 'hidden',
+                        border: '2px solid rgba(255,255,255,0.2)',
+                        flexShrink: 0
                     }}>
-                        LogikAi studio
+                        <img
+                            src={user?.avatar || 'https://ui-avatars.com/api/?name=User&background=random'}
+                            alt="User"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
                     </div>
-                    <div style={{
-                        fontSize: '0.75rem',
-                        letterSpacing: '0.4em',
-                        color: 'rgba(255, 255, 255, 0.4)',
-                        marginLeft: '0.4em' /* Offset for letter-spacing to center visually */
-                    }}>
-                        2 0 2 6
-                    </div>
-                </div>
-            )}
 
-            {/* Toggle Button */}
-            <div
-                className="sidebar-toggle"
-                onClick={() => setCollapsed(!collapsed)}
-                title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            >
-                <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    style={{ transform: collapsed ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 200ms' }}
-                >
-                    <path d="M15 18l-6-6 6-6" />
-                </svg>
+                    {/* User Info & Logout (Hidden if collapsed) */}
+                    {!collapsed && (
+                        <div style={{ flex: 1, overflow: 'hidden' }}>
+                            <div style={{
+                                fontSize: '14px',
+                                fontWeight: '600',
+                                color: 'white',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                            }}>
+                                {user?.name || 'User'}
+                            </div>
+                            <div style={{
+                                fontSize: '11px',
+                                color: 'rgba(255,255,255,0.6)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between'
+                            }}>
+                                <span>{user?.role || 'Guest'}</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Logout Button */}
+                    {!collapsed && (
+                        <button
+                            onClick={onLogout}
+                            title="Keluar Aplikasi"
+                            style={{
+                                background: 'rgba(255,255,255,0.1)',
+                                border: 'none',
+                                width: '28px',
+                                height: '28px',
+                                borderRadius: '6px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                color: '#fca5a5',
+                                flexShrink: 0,
+                                transition: 'all 0.2s'
+                            }}
+                            onMouseOver={(e) => e.target.style.background = 'rgba(239, 68, 68, 0.2)'}
+                            onMouseOut={(e) => e.target.style.background = 'rgba(255,255,255,0.1)'}
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                                <polyline points="16 17 21 12 16 7"></polyline>
+                                <line x1="21" y1="12" x2="9" y2="12"></line>
+                            </svg>
+                        </button>
+                    )}
+                </div>
             </div>
         </aside>
     )
@@ -202,7 +241,8 @@ Sidebar.propTypes = {
     setCollapsed: PropTypes.func.isRequired,
     mobileOpen: PropTypes.bool.isRequired,
     setMobileOpen: PropTypes.func.isRequired,
-    onLogout: PropTypes.func
+    onLogout: PropTypes.func,
+    user: PropTypes.object
 }
 
 export default Sidebar

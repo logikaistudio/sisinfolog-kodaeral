@@ -14,6 +14,7 @@ import './index.css'
 function App() {
   // Auth state
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [user, setUser] = useState(null)
 
   // App state
   const [currentPage, setCurrentPage] = useState('faslan-peta')
@@ -25,16 +26,29 @@ function App() {
     const loggedIn = localStorage.getItem('isLoggedIn')
     if (loggedIn === 'true') {
       setIsAuthenticated(true)
+      // Restore mock user
+      setUser({
+        name: 'Admin Kodaeral',
+        role: 'Super Admin',
+        avatar: 'https://ui-avatars.com/api/?name=Admin+Kodaeral&background=0ea5e9&color=fff'
+      })
     }
   }, [])
 
   const handleLogin = (username) => {
     setIsAuthenticated(true)
     localStorage.setItem('isLoggedIn', 'true')
+    // Set mock user data
+    setUser({
+      name: 'Admin Kodaeral',
+      role: 'Super Admin',
+      avatar: 'https://ui-avatars.com/api/?name=Admin+Kodaeral&background=0ea5e9&color=fff'
+    })
   }
 
   const handleLogout = () => {
     setIsAuthenticated(false)
+    setUser(null)
     localStorage.removeItem('isLoggedIn')
   }
 
@@ -96,6 +110,7 @@ function App() {
         mobileOpen={mobileSidebarOpen}
         setMobileOpen={setMobileSidebarOpen}
         onLogout={handleLogout}
+        user={user}
       />
 
       {/* Main Content */}
