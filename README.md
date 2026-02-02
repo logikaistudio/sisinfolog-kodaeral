@@ -12,26 +12,32 @@ Aplikasi modern untuk manajemen aset dan logistik Kodaeral 3 Jakarta dengan tamp
 - Pencatatan lokasi penyimpanan
 - Dashboard statistik real-time
 
-### 🏢 Bekang (Bekal Angkutan)
-- Manajemen persediaan dan bekal
-- Monitoring stok (Normal, Low, Kritis)
-- Kategorisasi bekal (BBM, Pelumas, Konsumsi, Sparepart)
-- Alert untuk stok rendah
-- Riwayat penerimaan dan distribusi
+### 🔐 Autentikasi & Keamanan (New)
+- **Login UI Modern**: Tampilan Glassmorphism yang elegan.
+- **User Profiles**: Integrasi profil pengguna di sidebar.
+- **Role Management**: Placeholder untuk pengaturan hak akses.
 
-### 📊 Harpan (Harian Pangkalan)
-- Laporan harian per shift (Pagi, Siang, Malam)
-- Tracking aktivitas operasional
-- Pencatatan insiden
-- Timeline aktivitas real-time
-- Dashboard status pangkalan
+### 🗺️ Peta Faslan
+- Peta interaktif fasilitas pangkalan.
+- Marker aset aset tanah dan bangunan.
+
+### 🛠️ Fasharpan (ex-Harpan)
+- Fasilitas Pemeliharaan & Perbaikan.
+- Monitoring status KRI/KAL/KAMLA.
+
+### 📦 DisBek (ex-Bekang)
+- Dinas Perbekalan.
+- Manajemen stok logistik.
+
+### 🚛 DisAng (New)
+- Dinas Angkutan.
+- Manajemen kendaraan dan operasional angkutan.
 
 ### ⚙️ Master Data
 - Manajemen kategori aset
 - Data lokasi penyimpanan
 - Database petugas
 - Satuan pengukuran
-- Interface dengan tabs untuk navigasi mudah
 
 ## 🎨 Design Features
 
