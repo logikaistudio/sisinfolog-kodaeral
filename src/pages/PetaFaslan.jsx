@@ -258,130 +258,147 @@ function PetaFaslan() {
 
             {/* Map Container */}
             <div style={{ flex: 1, position: 'relative', padding: '20px 32px', paddingBottom: '32px', minHeight: '400px' }}>
-                {loading ? (
-                    <div style={{
-                        height: '100%',
-                        minHeight: '400px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: 'white',
-                        borderRadius: '16px',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
-                    }}>
-                        <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🗺️</div>
-                            <div style={{ fontSize: '16px', color: '#6b7280', fontWeight: '600' }}>Memuat peta...</div>
+                <div style={{
+                    height: '100%',
+                    minHeight: '400px',
+                    borderRadius: '16px',
+                    overflow: 'hidden',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+                    border: '1px solid #e5e7eb',
+                    position: 'relative'
+                }}>
+                    {loading && (
+                        <div style={{
+                            position: 'absolute',
+                            top: '10px',
+                            right: '10px',
+                            background: 'rgba(255,255,255,0.9)',
+                            padding: '4px 12px',
+                            borderRadius: '20px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            color: '#64748b',
+                            zIndex: 1000,
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                        }}>
+                            <div style={{
+                                width: '12px',
+                                height: '12px',
+                                border: '2px solid #cbd5e1',
+                                borderTopColor: '#011F5B',
+                                borderRadius: '50%',
+                                animation: 'spin 1s linear infinite'
+                            }}></div>
+                            Memuat data...
                         </div>
-                    </div>
-                ) : (
-                    <div style={{
-                        height: '100%',
-                        minHeight: '400px',
-                        borderRadius: '16px',
-                        overflow: 'hidden',
-                        boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
-                        border: '1px solid #e5e7eb'
-                    }}>
-                        <MapContainer
-                            center={center}
-                            zoom={12}
-                            style={{ height: '100%', width: '100%', minHeight: '400px' }}
-                            scrollWheelZoom={true}
-                        >
-                            <TileLayer
-                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                            />
+                    )}
+                    <MapContainer
+                        center={center}
+                        zoom={12}
+                        style={{ height: '100%', width: '100%', minHeight: '400px' }}
+                        scrollWheelZoom={true}
+                    >
+                        <TileLayer
+                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        />
 
-                            {/* Markers for Aset Tanah */}
-                            {assetsTanah.map((asset) => {
-                                const coords = parseCoordinates(asset.coordinates)
-                                if (!coords) return null
+                        {/* Markers for Aset Tanah */}
+                        {assetsTanah.map((asset) => {
+                            const coords = parseCoordinates(asset.coordinates)
+                            if (!coords) return null
 
-                                return (
-                                    <Marker key={`tanah-${asset.id}`} position={coords} icon={tanahIcon}>
-                                        <Popup>
-                                            <div style={{ minWidth: '200px' }}>
-                                                <div style={{
-                                                    fontSize: '14px',
-                                                    fontWeight: '700',
-                                                    color: '#10b981',
-                                                    marginBottom: '8px',
-                                                    paddingBottom: '8px',
-                                                    borderBottom: '2px solid #10b981'
-                                                }}>
-                                                    📍 ASET TANAH
-                                                </div>
-                                                <div style={{ marginBottom: '6px' }}>
-                                                    <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: '600' }}>Nama</div>
-                                                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>
-                                                        {asset.name || '-'}
-                                                    </div>
-                                                </div>
-                                                <div style={{ marginBottom: '6px' }}>
-                                                    <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: '600' }}>Jenis</div>
-                                                    <div style={{ fontSize: '13px', color: '#4b5563' }}>
-                                                        {asset.category || '-'}
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: '600' }}>Luas</div>
-                                                    <div style={{ fontSize: '16px', fontWeight: '700', color: '#10b981' }}>
-                                                        {formatLuas(asset.luas)} m²
-                                                    </div>
+                            return (
+                                <Marker key={`tanah-${asset.id}`} position={coords} icon={tanahIcon}>
+                                    <Popup>
+                                        <div style={{ minWidth: '200px' }}>
+                                            <div style={{
+                                                fontSize: '14px',
+                                                fontWeight: '700',
+                                                color: '#10b981',
+                                                marginBottom: '8px',
+                                                paddingBottom: '8px',
+                                                borderBottom: '2px solid #10b981'
+                                            }}>
+                                                📍 ASET TANAH
+                                            </div>
+                                            <div style={{ marginBottom: '6px' }}>
+                                                <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: '600' }}>Nama</div>
+                                                <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>
+                                                    {asset.name || '-'}
                                                 </div>
                                             </div>
-                                        </Popup>
-                                    </Marker>
-                                )
-                            })}
-
-                            {/* Markers for Aset Bangunan */}
-                            {assetsBangunan.map((asset) => {
-                                const coords = parseCoordinates(asset.coordinates)
-                                if (!coords) return null
-
-                                return (
-                                    <Marker key={`bangunan-${asset.id}`} position={coords} icon={bangunanIcon}>
-                                        <Popup>
-                                            <div style={{ minWidth: '200px' }}>
-                                                <div style={{
-                                                    fontSize: '14px',
-                                                    fontWeight: '700',
-                                                    color: '#3b82f6',
-                                                    marginBottom: '8px',
-                                                    paddingBottom: '8px',
-                                                    borderBottom: '2px solid #3b82f6'
-                                                }}>
-                                                    🏢 ASET BANGUNAN
-                                                </div>
-                                                <div style={{ marginBottom: '6px' }}>
-                                                    <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: '600' }}>Nama</div>
-                                                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>
-                                                        {asset.name || '-'}
-                                                    </div>
-                                                </div>
-                                                <div style={{ marginBottom: '6px' }}>
-                                                    <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: '600' }}>Jenis</div>
-                                                    <div style={{ fontSize: '13px', color: '#4b5563' }}>
-                                                        {asset.category || '-'}
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: '600' }}>Luas</div>
-                                                    <div style={{ fontSize: '16px', fontWeight: '700', color: '#3b82f6' }}>
-                                                        {formatLuas(asset.luas)} m²
-                                                    </div>
+                                            <div style={{ marginBottom: '6px' }}>
+                                                <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: '600' }}>Jenis</div>
+                                                <div style={{ fontSize: '13px', color: '#4b5563' }}>
+                                                    {asset.category || '-'}
                                                 </div>
                                             </div>
-                                        </Popup>
-                                    </Marker>
-                                )
-                            })}
-                        </MapContainer>
-                    </div>
-                )}
+                                            <div>
+                                                <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: '600' }}>Luas</div>
+                                                <div style={{ fontSize: '16px', fontWeight: '700', color: '#10b981' }}>
+                                                    {formatLuas(asset.luas)} m²
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </Popup>
+                                </Marker>
+                            )
+                        })}
+
+                        {/* Markers for Aset Bangunan */}
+                        {assetsBangunan.map((asset) => {
+                            const coords = parseCoordinates(asset.coordinates)
+                            if (!coords) return null
+
+                            return (
+                                <Marker key={`bangunan-${asset.id}`} position={coords} icon={bangunanIcon}>
+                                    <Popup>
+                                        <div style={{ minWidth: '200px' }}>
+                                            <div style={{
+                                                fontSize: '14px',
+                                                fontWeight: '700',
+                                                color: '#3b82f6',
+                                                marginBottom: '8px',
+                                                paddingBottom: '8px',
+                                                borderBottom: '2px solid #3b82f6'
+                                            }}>
+                                                🏢 ASET BANGUNAN
+                                            </div>
+                                            <div style={{ marginBottom: '6px' }}>
+                                                <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: '600' }}>Nama</div>
+                                                <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>
+                                                    {asset.name || '-'}
+                                                </div>
+                                            </div>
+                                            <div style={{ marginBottom: '6px' }}>
+                                                <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: '600' }}>Jenis</div>
+                                                <div style={{ fontSize: '13px', color: '#4b5563' }}>
+                                                    {asset.category || '-'}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: '600' }}>Luas</div>
+                                                <div style={{ fontSize: '16px', fontWeight: '700', color: '#3b82f6' }}>
+                                                    {formatLuas(asset.luas)} m²
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </Popup>
+                                </Marker>
+                            )
+                        })}
+                    </MapContainer>
+                </div>
+                <style>{`
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                `}</style>
             </div>
         </div>
     )
