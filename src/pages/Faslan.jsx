@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import PropTypes from 'prop-types'
-import { read, utils } from 'xlsx'
+import { read, utils, writeFile } from 'xlsx'
 
 function Faslan({ type }) {
     const [data, setData] = useState([])
@@ -32,6 +32,54 @@ function Faslan({ type }) {
     const handleImportClick = () => {
         fileInputRef.current.click()
     }
+
+    const handleDownloadTemplate = () => {
+        // Define headers matching the import logic
+        const headers = [
+            'LOKASI KAVLING',
+            'NAMA BLOK',
+            'NO_BLOK',
+            'NAMA DEPAN',
+            'NAMA BELAKANG',
+            'PANGKAT',
+            'NRP/NIP',
+            'JABATAN',
+            'LUAS(M)',
+            'STATUS ASET',
+            'FUNGSI BANGUNAN',
+            'AREA',
+            'LOKASI KOORDINAT',
+            'PETA BATAS KAWASAN'
+        ];
+
+        // Create dummy data row
+        const sampleData = [
+            {
+                'LOKASI KAVLING': 'PANGKALAN JATI',
+                'NAMA BLOK': 'A',
+                'NO_BLOK': '1',
+                'NAMA DEPAN': 'BUDI',
+                'NAMA BELAKANG': 'SANTOSO',
+                'PANGKAT': 'KOLONEL',
+                'NRP/NIP': '12345/P',
+                'JABATAN': 'KADIS',
+                'LUAS(M)': '250',
+                'STATUS ASET': 'Pinjam Pakai',
+                'FUNGSI BANGUNAN': 'Rumah Negara',
+                'AREA': 'Jakarta Selatan',
+                'LOKASI KOORDINAT': '-6.123, 106.123',
+                'PETA BATAS KAWASAN': 'Batas Utara: Jalan A'
+            }
+        ];
+
+        // Create worksheet
+        const ws = utils.json_to_sheet(sampleData, { header: headers });
+        const wb = utils.book_new();
+        utils.book_append_sheet(wb, ws, "Template Import");
+
+        // Download file
+        writeFile(wb, "Template_Import_Aset.xlsx");
+    };
 
     const handleFileUpload = async (e) => {
         const file = e.target.files[0]
@@ -156,12 +204,20 @@ function Faslan({ type }) {
                     </button>
 
                     {type === 'tanah' && (
-                        <button className="btn btn-outline" onClick={handleImportClick}>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                            </svg>
-                            Import Excel
-                        </button>
+                        <>
+                            <button className="btn btn-outline" onClick={handleImportClick}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                </svg>
+                                Import Excel
+                            </button>
+                            <button className="btn btn-outline" onClick={handleDownloadTemplate} title="Download Template Excel">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                </svg>
+                                Template
+                            </button>
+                        </>
                     )}
 
                     <button className="btn btn-outline">
