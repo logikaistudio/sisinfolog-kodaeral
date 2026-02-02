@@ -13,10 +13,10 @@
   },
   "dependencies": {
     "concurrently": "^9.1.2",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "pg": "^8.13.1",
+    "cors": "^2.8.6",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.1",
+    "pg": "^8.18.0",
     "prop-types": "^15.8.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
