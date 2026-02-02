@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
@@ -38,11 +38,25 @@ const bangunanIcon = new L.Icon({
     popupAnchor: [0, -10]
 })
 
+// Component to update map center without re-rendering the whole map
+function ChangeView({ center }) {
+    const map = useMap()
+    useEffect(() => {
+        if (center) {
+            map.flyTo(center, map.getZoom(), {
+                animate: true,
+                duration: 1.5
+            })
+        }
+    }, [center, map])
+    return null
+}
+
 function PetaFaslan() {
     const [assetsTanah, setAssetsTanah] = useState([])
     const [assetsBangunan, setAssetsBangunan] = useState([])
     const [loading, setLoading] = useState(true)
-    const [center, setCenter] = useState([-6.2088, 106.8456]) // Default: Jakarta
+    const [center, setCenter] = useState([-6.1754, 106.8272]) // Default: Jakarta (Monas)
 
     // Helper function to convert DMS to Decimal
     const dmsToDecimal = (degrees, minutes, seconds, direction) => {
@@ -117,7 +131,7 @@ function PetaFaslan() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                setLoading(true)
+                // setLoading(true) // Non-blocking loading
 
                 // Fetch aset tanah
                 const endpointTanah = '/api/assets/tanah'
@@ -131,9 +145,6 @@ function PetaFaslan() {
                 const resBangunan = await fetch(finalEndpointBangunan)
                 const dataBangunan = await resBangunan.json()
 
-                console.log('Data Tanah:', dataTanah)
-                console.log('Data Bangunan:', dataBangunan)
-
                 // Filter assets with valid coordinates
                 const validTanah = dataTanah.filter(asset => {
                     const coords = parseCoordinates(asset.coordinates)
@@ -145,9 +156,6 @@ function PetaFaslan() {
                     return coords !== null
                 })
 
-                console.log('Valid Tanah:', validTanah.length)
-                console.log('Valid Bangunan:', validBangunan.length)
-
                 setAssetsTanah(validTanah)
                 setAssetsBangunan(validBangunan)
 
@@ -155,13 +163,11 @@ function PetaFaslan() {
                 if (validTanah.length > 0) {
                     const firstCoords = parseCoordinates(validTanah[0].coordinates)
                     if (firstCoords) {
-                        console.log('Setting center to:', firstCoords)
                         setCenter(firstCoords)
                     }
                 } else if (validBangunan.length > 0) {
                     const firstCoords = parseCoordinates(validBangunan[0].coordinates)
                     if (firstCoords) {
-                        console.log('Setting center to:', firstCoords)
                         setCenter(firstCoords)
                     }
                 }
@@ -296,11 +302,12 @@ function PetaFaslan() {
                         </div>
                     )}
                     <MapContainer
-                        center={center}
+                        center={[-6.1754, 106.8272]} // Static initial center (Central Jakarta)
                         zoom={12}
                         style={{ height: '100%', width: '100%', minHeight: '400px' }}
                         scrollWheelZoom={true}
                     >
+                        <ChangeView center={center} />
                         <TileLayer
                             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -318,10 +325,10 @@ function PetaFaslan() {
                                             <div style={{
                                                 fontSize: '14px',
                                                 fontWeight: '700',
-                                                color: '#10b981',
+                                                color: '#0ea5e9',
                                                 marginBottom: '8px',
                                                 paddingBottom: '8px',
-                                                borderBottom: '2px solid #10b981'
+                                                borderBottom: '2px solid #0ea5e9'
                                             }}>
                                                 📍 ASET TANAH
                                             </div>
@@ -339,7 +346,7 @@ function PetaFaslan() {
                                             </div>
                                             <div>
                                                 <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: '600' }}>Luas</div>
-                                                <div style={{ fontSize: '16px', fontWeight: '700', color: '#10b981' }}>
+                                                <div style={{ fontSize: '16px', fontWeight: '700', color: '#0ea5e9' }}>
                                                     {formatLuas(asset.luas)} m²
                                                 </div>
                                             </div>
@@ -361,10 +368,10 @@ function PetaFaslan() {
                                             <div style={{
                                                 fontSize: '14px',
                                                 fontWeight: '700',
-                                                color: '#3b82f6',
+                                                color: '#f97316',
                                                 marginBottom: '8px',
                                                 paddingBottom: '8px',
-                                                borderBottom: '2px solid #3b82f6'
+                                                borderBottom: '2px solid #f97316'
                                             }}>
                                                 🏢 ASET BANGUNAN
                                             </div>
@@ -382,7 +389,7 @@ function PetaFaslan() {
                                             </div>
                                             <div>
                                                 <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: '600' }}>Luas</div>
-                                                <div style={{ fontSize: '16px', fontWeight: '700', color: '#3b82f6' }}>
+                                                <div style={{ fontSize: '16px', fontWeight: '700', color: '#f97316' }}>
                                                     {formatLuas(asset.luas)} m²
                                                 </div>
                                             </div>
@@ -393,12 +400,6 @@ function PetaFaslan() {
                         })}
                     </MapContainer>
                 </div>
-                <style>{`
-                    @keyframes spin {
-                        0% { transform: rotate(0deg); }
-                        100% { transform: rotate(360deg); }
-                    }
-                `}</style>
             </div>
         </div>
     )
