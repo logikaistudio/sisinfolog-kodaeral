@@ -167,7 +167,7 @@ a:hover {
 }
 
 .content-wrapper {
-  padding: 0;
+  padding: var(--spacing-xl);
   height: 100%;
   margin: 0;
 }
