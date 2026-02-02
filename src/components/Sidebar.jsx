@@ -11,7 +11,8 @@ function Sidebar({ currentPage, setCurrentPage, collapsed, setCollapsed, mobileO
             icon: '🏛️',
             description: 'Fasilitas Pangkalan',
             children: [
-                { id: 'faslan-tanah', label: 'Aset Tanah', icon: '🗺️' },
+                { id: 'faslan-peta', label: 'Peta Faslan', icon: '🗺️' },
+                { id: 'faslan-tanah', label: 'Aset Tanah', icon: '📍' },
                 { id: 'faslan-bangunan', label: 'Aset Bangunan', icon: '🏢' }
             ]
         },
@@ -57,17 +58,24 @@ function Sidebar({ currentPage, setCurrentPage, collapsed, setCollapsed, mobileO
     return (
         <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
             {/* Header */}
-            <div className="sidebar-header">
-                <div className="sidebar-logo">
-                    <img src="/logo.png" alt="Logo" style={{ width: '72px', height: '72px', objectFit: 'contain' }} />
+            <div className="sidebar-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '50px', padding: '1.5rem 1rem' }}>
+                <div className="sidebar-logo" style={{ paddingTop: '40px' }}>
+                    <img src="/logo.png" alt="Logo" style={{ width: '96px', height: '96px', objectFit: 'contain' }} />
                 </div>
-                <div className="sidebar-title">
-                    <h1 style={{ lineHeight: '1.2' }}>Sisinfolog</h1>
+                <div className="sidebar-title" style={{ textAlign: 'center', width: '100%' }}>
+                    <h1 style={{
+                        lineHeight: '1.3',
+                        margin: 0,
+                        fontSize: '1.5rem',
+                        fontWeight: '700',
+                        letterSpacing: '0.5px'
+                    }}>Sisinfolog</h1>
                     <p style={{
                         fontSize: 'var(--font-size-sm)',
-                        marginTop: '4px',
+                        marginTop: '2px',
                         fontWeight: '500',
-                        opacity: 0.9
+                        opacity: 0.9,
+                        margin: '2px 0 0 0'
                     }}>Kodaeral 3 Jakarta</p>
                 </div>
             </div>

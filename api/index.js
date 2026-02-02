@@ -152,6 +152,28 @@ app.post('/api/harpan', async (req, res) => {
     }
 });
 
+// Delete All Tanah Assets
+app.delete('/api/assets/tanah', async (req, res) => {
+    try {
+        await pool.query('TRUNCATE TABLE assets_tanah RESTART IDENTITY');
+        res.json({ message: 'All tanah assets deleted successfully' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Delete All Bangunan Assets
+app.delete('/api/assets/bangunan', async (req, res) => {
+    try {
+        await pool.query('TRUNCATE TABLE assets_bangunan RESTART IDENTITY');
+        res.json({ message: 'All bangunan assets deleted successfully' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // For local dev
 if (process.env.NODE_ENV !== 'production') {
     app.listen(port, () => {

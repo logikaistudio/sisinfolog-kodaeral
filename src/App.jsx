@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Sidebar from './components/Sidebar'
+import PetaFaslan from './pages/PetaFaslan'
 import Faslan from './pages/Faslan'
 import Bekang from './pages/Bekang'
 import Harpan from './pages/Harpan'
@@ -7,12 +8,14 @@ import MasterData from './pages/MasterData'
 import './index.css'
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('faslan-tanah')
+  const [currentPage, setCurrentPage] = useState('faslan-peta')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
   const renderPage = () => {
     switch (currentPage) {
+      case 'faslan-peta':
+        return <PetaFaslan />
       case 'faslan-tanah':
         return <Faslan type="tanah" />
       case 'faslan-bangunan':
@@ -24,7 +27,7 @@ function App() {
       case 'masterdata':
         return <MasterData />
       default:
-        return <Faslan type="tanah" />
+        return <PetaFaslan />
     }
   }
 
