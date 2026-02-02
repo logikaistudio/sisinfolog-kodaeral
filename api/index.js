@@ -68,6 +68,36 @@ app.post('/api/assets/tanah', async (req, res) => {
     }
 });
 
+// Update Tanah Asset
+app.put('/api/assets/tanah/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, code, category, luas, status, location, coordinates, map_boundary, area, occupant_name, occupant_rank, occupant_nrp, occupant_title } = req.body;
+    try {
+        const result = await pool.query(
+            `UPDATE assets_tanah SET name=$1, code=$2, category=$3, luas=$4, status=$5, location=$6, coordinates=$7, map_boundary=$8, area=$9, occupant_name=$10, occupant_rank=$11, occupant_nrp=$12, occupant_title=$13 WHERE id=$14 RETURNING *`,
+            [name, code, category, luas, status, location, coordinates, map_boundary, area, occupant_name, occupant_rank, occupant_nrp, occupant_title, id]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Asset not found' });
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Delete Tanah Asset
+app.delete('/api/assets/tanah/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query('DELETE FROM assets_tanah WHERE id = $1 RETURNING *', [id]);
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Asset not found' });
+        res.json({ message: 'Asset deleted successfully' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // --- BEKANG API ---
 // Get All Supplies
 app.get('/api/supplies', async (req, res) => {
