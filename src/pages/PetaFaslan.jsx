@@ -71,15 +71,14 @@ function PetaFaslan() {
 
     // Helper function to parse coordinates
     const parseCoordinates = (coordString) => {
-        if (!coordString || coordString === '-' || coordString.trim() === '') {
+        if (!coordString || coordString === '-' || String(coordString).trim() === '') {
             return null
         }
 
-        const str = coordString.toString().trim()
+        let str = String(coordString).trim()
 
-        // Try DMS format with various symbols
-        // Format: "6 ᵒ 12 ′ 39.28 ₺ S 106 ᵒ 46 ′ 44.87 ₺ E"
-        const dmsPattern = /(\d+)\s*[°ᵒo]\s*(\d+)\s*[′'´]\s*([\d.]+)\s*[″"₺]?\s*([NS])\s*(\d+)\s*[°ᵒo]\s*(\d+)\s*[′'´]\s*([\d.]+)\s*[″"₺]?\s*([EW])/i
+        // Regex untuk DMS Lengkap (6°09'51.78"S 106°50'22.68"E) - handle simbol & atau ₺ atau spasi
+        const dmsPattern = /(\d+)\s*[°ᵒo]\s*(\d+)\s*[′'´]\s*([\d.]+)\s*[″"₺]?\s*[^NS]*([NS])[^°\d]*(\d+)\s*[°ᵒo]\s*(\d+)\s*[′'´]\s*([\d.]+)\s*[″"₺]?\s*[^EW]*([EW])/i
         const dmsMatch = str.match(dmsPattern)
 
         if (dmsMatch) {
@@ -88,8 +87,8 @@ function PetaFaslan() {
             return [lat, lon]
         }
 
-        // Try simple DMS without seconds: "6°12'S 106°46'E"
-        const simpleDmsPattern = /(\d+)\s*[°ᵒo]\s*(\d+)\s*[′'´]?\s*([NS])\s*(\d+)\s*[°ᵒo]\s*(\d+)\s*[′'´]?\s*([EW])/i
+        // Regex untuk DMS Sederhana (6°12'S 106°46'E) - tanpa detik
+        const simpleDmsPattern = /(\d+)\s*[°ᵒo]\s*(\d+)\s*[′'´]?\s*[^NS]*([NS])[^°\d]*(\d+)\s*[°ᵒo]\s*(\d+)\s*[′'´]?\s*[^EW]*([EW])/i
         const simpleDmsMatch = str.match(simpleDmsPattern)
 
         if (simpleDmsMatch) {
@@ -98,8 +97,41 @@ function PetaFaslan() {
             return [lat, lon]
         }
 
-        // Decimal format: "-6.2088, 106.8456" or "106.8456, -6.2088"
-        const parts = str.split(',').map(s => s.trim()).filter(s => s)
+        // Handling Decimal
+        // Ganti koma desimal (jika diapit angka) menjadi titik: 1,234 -> 1.234
+        // Tapi jangan ganti koma separator: 1.234, 5.678
+        // Deteksi dulu apakah pakai koma atau titik koma sebagai separator
+
+        let parts = []
+
+        if (str.includes(';')) {
+            // Separator kuat: titik koma
+            // Replace koma jadi titik di masing2 bagian
+            parts = str.split(';').map(s => s.replace(',', '.'))
+        } else {
+            // Cek jumlah koma
+            const commaCount = (str.match(/,/g) || []).length
+
+            if (commaCount === 1) {
+                // Standar: -6.1234, 106.1234 (1 koma sebagai separator)
+                parts = str.split(',')
+            } else if (commaCount > 1) {
+                // Kemungkinan format Indo: -6,1234, 106,1234
+                // Replace semua koma yang diapit angka menjadi titik
+                const normalized = str.replace(/(\d),(\d)/g, '$1.$2')
+                // Sekarang sisa koma separator (atau spasi)
+                if (normalized.includes(',')) {
+                    parts = normalized.split(',')
+                } else {
+                    parts = normalized.split(/\s+/)
+                }
+            } else {
+                // 0 koma, pisah spasi: -6.1234 106.1234
+                parts = str.split(/\s+/)
+            }
+        }
+
+        parts = parts.map(s => s.trim()).filter(s => s)
 
         if (parts.length >= 2) {
             const num1 = parseFloat(parts[0])
@@ -107,14 +139,20 @@ function PetaFaslan() {
 
             if (!isNaN(num1) && !isNaN(num2)) {
                 let lat, lon
-                // Determine which is lat and lon based on value
-                if (Math.abs(num1) >= 100) {
-                    lat = num2
+                // Auto-detect Lat/Lon based on Indonesia region
+                // Lon Indonesia: 95 - 141 (Positive, > 90)
+                // Lat Indonesia: -11 - 6 (Small number, < 90)
+
+                if (Math.abs(num1) > 90) {
+                    // num1 is Longitude, num2 is Latitude
                     lon = num1
-                } else if (Math.abs(num2) >= 100) {
+                    lat = num2
+                } else if (Math.abs(num2) > 90) {
+                    // num2 is Longitude, num1 is Latitude
                     lat = num1
                     lon = num2
                 } else {
+                    // Fallback: usually Lat, Lon
                     lat = num1
                     lon = num2
                 }

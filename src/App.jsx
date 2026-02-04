@@ -1,15 +1,24 @@
 import { useState, useEffect } from 'react'
 import Sidebar from './components/Sidebar'
 import Login from './pages/Login'
+import DashboardPimpinan from './pages/DashboardPimpinan'
 import PetaFaslan from './pages/PetaFaslan'
 import Faslan from './pages/Faslan'
 import DisBek from './pages/DisBek'
 import DisAng from './pages/DisAng'
 import Fasharpan from './pages/Fasharpan'
+import Faslabuh from './pages/Faslabuh'
+import Kerjasama from './pages/Kerjasama'
+import IndustriJasaMaritim from './pages/IndustriJasaMaritim'
+import Satharkan from './pages/Satharkan'
 import MasterData from './pages/MasterData'
+import MasterAsset from './pages/MasterAsset'
+import MasterAssetList from './pages/MasterAssetList'
+import AssetDetail from './pages/AssetDetail'
 import PengaturanUsers from './pages/PengaturanUsers'
 import PengaturanRoles from './pages/PengaturanRoles'
 import './index.css'
+
 
 function App() {
   // Auth state
@@ -17,9 +26,10 @@ function App() {
   const [user, setUser] = useState(null)
 
   // App state
-  const [currentPage, setCurrentPage] = useState('faslan-peta')
+  const [currentPage, setCurrentPage] = useState('dashboard-pimpinan')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  const [selectedAssetCode, setSelectedAssetCode] = useState(null)
 
   // Check data from storage on load (optional simulation)
   useEffect(() => {
@@ -59,20 +69,42 @@ function App() {
 
   const renderPage = () => {
     switch (currentPage) {
+      case 'dashboard-pimpinan':
+        return <DashboardPimpinan />
       case 'faslan-peta':
         return <PetaFaslan />
       case 'faslan-tanah':
         return <Faslan type="tanah" />
+      case 'faslan-kapling':
+        return <Faslan type="kapling" />
       case 'faslan-bangunan':
         return <Faslan type="bangunan" />
+      case 'faslan-faslabuh':
+        return <Faslabuh />
+      case 'faslan-kerjasama':
+        return <Kerjasama />
       case 'disbek':
         return <DisBek />
       case 'disang':
         return <DisAng />
       case 'fasharpan':
         return <Fasharpan />
+      case 'fasharpan-injasmar':
+        return <IndustriJasaMaritim />
+      case 'satharkan':
+        return <Satharkan />
       case 'masterdata':
         return <MasterData />
+      case 'master-asset':
+        return <MasterAsset onViewDetail={(kodeAsset) => {
+          setSelectedAssetCode(kodeAsset)
+          setCurrentPage('asset-detail')
+        }} />
+      case 'asset-detail':
+        return <AssetDetail
+          kodeAsset={selectedAssetCode}
+          onBack={() => setCurrentPage('master-asset')}
+        />
       case 'pengaturan-users':
         return <PengaturanUsers />
       case 'pengaturan-roles':

@@ -39,6 +39,17 @@ Aplikasi modern untuk manajemen aset dan logistik Kodaeral 3 Jakarta dengan tamp
 - Database petugas
 - Satuan pengukuran
 
+### 📥 Master Asset Import (NEW) ⭐
+- **Smart Import**: Upload Excel dengan auto-detect update/insert
+- **3 Mode Import**: Upsert, Insert Only, Update Only
+- **Preview & Validasi**: Lihat dan validasi data sebelum import
+- **Progress Tracking**: Monitor real-time import progress
+- **Error Handling**: Detail error untuk setiap baris yang gagal
+- **Template Excel**: Download template dengan panduan lengkap
+- **Batch Processing**: Import ribuan data sekaligus dengan cepat
+
+📖 **[Panduan Lengkap Import Master Asset](./IMPORT_MASTER_ASSET.md)**
+
 ## 🎨 Design Features
 
 - **Modern UI/UX**: Desain clean dan premium seperti aplikasi tahun 2025
