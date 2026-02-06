@@ -32,6 +32,86 @@ app.get('/api/health', async (req, res) => {
     }
 });
 
+// Database Setup Endpoint (for production first-time setup)
+app.get('/api/setup', async (req, res) => {
+    try {
+        const results = [];
+
+        // 1. Setup Users Table
+        results.push('Setting up users table...');
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(100),
+                email VARCHAR(100) UNIQUE,
+                role VARCHAR(50),
+                status VARCHAR(20) DEFAULT 'Active',
+                avatar TEXT,
+                username VARCHAR(50) UNIQUE,
+                password VARCHAR(255),
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+
+        // Check and create default admin
+        const adminCheck = await pool.query("SELECT * FROM users WHERE username = 'kodaeral'");
+        if (adminCheck.rows.length === 0) {
+            await pool.query(`
+                INSERT INTO users (name, email, role, status, username, password) 
+                VALUES ('Administrator', 'admin@kodaeral.com', 'Super Admin', 'Active', 'kodaeral', 'kodaeral')
+            `);
+            results.push('✅ Default admin user created (kodaeral/kodaeral)');
+        } else {
+            results.push('✅ Admin user already exists');
+        }
+
+        // 2. Setup Roles Table
+        results.push('Setting up roles table...');
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS roles (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(100) NOT NULL UNIQUE,
+                description TEXT,
+                permissions TEXT[],
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+
+        const rolesCheck = await pool.query("SELECT COUNT(*) FROM roles");
+        if (parseInt(rolesCheck.rows[0].count) === 0) {
+            await pool.query(`
+                INSERT INTO roles (name, description, permissions) VALUES 
+                ('Super Admin', 'Full access to all system features', ARRAY['all']),
+                ('Admin', 'Administrative access', ARRAY['manage_users', 'manage_content']),
+                ('User', 'Standard user access', ARRAY['read_content']);
+            `);
+            results.push('✅ Default roles created');
+        } else {
+            results.push('✅ Roles already exist');
+        }
+
+        res.json({
+            status: 'success',
+            message: 'Database setup completed',
+            results: results,
+            credentials: {
+                username: 'kodaeral',
+                password: 'kodaeral'
+            }
+        });
+
+    } catch (err) {
+        console.error('Setup error:', err);
+        res.status(500).json({
+            status: 'error',
+            message: 'Setup failed',
+            error: err.message
+        });
+    }
+});
+
 // Get Tanah Assets
 app.get('/api/assets/tanah', async (req, res) => {
     try {
