@@ -31,35 +31,45 @@ function App() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [selectedAssetCode, setSelectedAssetCode] = useState(null)
 
-  // Check data from storage on load (optional simulation)
+  // Check for existing session on load
   useEffect(() => {
-    const loggedIn = localStorage.getItem('isLoggedIn')
-    if (loggedIn === 'true') {
-      setIsAuthenticated(true)
-      // Restore mock user
-      setUser({
-        name: 'Admin Kodaeral',
-        role: 'Super Admin',
-        avatar: 'https://ui-avatars.com/api/?name=Admin+Kodaeral&background=0ea5e9&color=fff'
-      })
+    const storedUser = localStorage.getItem('currentUser')
+    if (storedUser) {
+      try {
+        const userData = JSON.parse(storedUser)
+        setIsAuthenticated(true)
+        setUser(userData)
+      } catch (error) {
+        console.error('Error parsing stored user:', error)
+        localStorage.removeItem('currentUser')
+      }
     }
   }, [])
 
-  const handleLogin = (username) => {
+  const handleLogin = (userData) => {
     setIsAuthenticated(true)
-    localStorage.setItem('isLoggedIn', 'true')
-    // Set mock user data
-    setUser({
-      name: 'Admin Kodaeral',
-      role: 'Super Admin',
-      avatar: 'https://ui-avatars.com/api/?name=Admin+Kodaeral&background=0ea5e9&color=fff'
-    })
+    setUser(userData)
+    // currentUser already saved by Login.jsx, but we can ensure it here
+    if (typeof userData === 'string') {
+      // Old format - just username
+      const mockUser = {
+        name: userData,
+        role: 'Super Admin',
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(userData)}&background=0ea5e9&color=fff`
+      }
+      setUser(mockUser)
+      localStorage.setItem('currentUser', JSON.stringify(mockUser))
+    } else {
+      // New format - full user object from API
+      localStorage.setItem('currentUser', JSON.stringify(userData))
+    }
   }
 
   const handleLogout = () => {
     setIsAuthenticated(false)
     setUser(null)
-    localStorage.removeItem('isLoggedIn')
+    localStorage.removeItem('currentUser')
+    localStorage.removeItem('isLoggedIn') // Clean up old key too
   }
 
   // If not authenticated, show Login page

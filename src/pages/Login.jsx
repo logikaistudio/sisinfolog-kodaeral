@@ -6,20 +6,37 @@ function Login({ onLogin }) {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault()
         setLoading(true)
         setError('')
 
-        // Mock login validation
-        setTimeout(() => {
-            if (username === 'kodaeral' && password === 'kodaeral') {
-                onLogin(username)
-            } else {
-                setError('Username atau password salah!')
-                setLoading(false)
+        try {
+            // Gunakan URL relatif agar lewat proxy Vite (atau full URL jika production)
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Login gagal');
             }
-        }, 1000)
+
+            // Login berhasil
+            localStorage.setItem('currentUser', JSON.stringify(data.user));
+            onLogin(data.user); // Pass full user object to App component
+
+        } catch (err) {
+            console.error('Login error:', err);
+            setError(err.message || 'Terjadi kesalahan pada server');
+        } finally {
+            setLoading(false)
+        }
     }
 
     return (

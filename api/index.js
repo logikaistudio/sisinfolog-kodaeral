@@ -660,37 +660,339 @@ app.post('/api/master/units', async (req, res) => {
     }
 });
 
+// ============================================
+// AUTHENTICATION & USER MANAGEMENT ENDPOINTS
+// ============================================
+
+// Helper function to ensure users table exists with all required columns
+async function ensureUsersTable() {
+    try {
+        // Create table if not exists
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(100),
+                email VARCHAR(100) UNIQUE,
+                role VARCHAR(50),
+                status VARCHAR(20) DEFAULT 'Active',
+                avatar TEXT,
+                username VARCHAR(50) UNIQUE,
+                password VARCHAR(255),
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+
+        // Add missing columns if table already exists
+        await pool.query(`
+            DO $$ 
+            BEGIN 
+                BEGIN
+                    ALTER TABLE users ADD COLUMN username VARCHAR(50) UNIQUE;
+                EXCEPTION
+                    WHEN duplicate_column THEN NULL;
+                END;
+                BEGIN
+                    ALTER TABLE users ADD COLUMN password VARCHAR(255);
+                EXCEPTION
+                    WHEN duplicate_column THEN NULL;
+                END;
+                BEGIN
+                    ALTER TABLE users ADD COLUMN updated_at TIMESTAMP DEFAULT NOW();
+                EXCEPTION
+                    WHEN duplicate_column THEN NULL;
+                END;
+            END $$;
+        `);
+
+        // Ensure default admin exists
+        const adminCheck = await pool.query("SELECT * FROM users WHERE username = 'kodaeral'");
+        if (adminCheck.rows.length === 0) {
+            await pool.query(`
+                INSERT INTO users (name, email, role, status, username, password) 
+                VALUES ('Administrator', 'admin@kodaeral.com', 'Super Admin', 'Active', 'kodaeral', 'kodaeral')
+            `);
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Error ensuring users table:', error);
+        throw error;
+    }
+}
+
+// Helper function to ensure roles table exists
+async function ensureRolesTable() {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS roles (
+                id SERIAL PRIMARY KEY, 
+                name VARCHAR(100) NOT NULL UNIQUE,
+                description TEXT,
+                permissions TEXT[],
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+
+        // Fix column name if it's wrong (permission vs permissions)
+        await pool.query(`
+            DO $$ 
+            BEGIN 
+                -- Check if old column 'permission' exists and rename it
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='roles' AND column_name='permission'
+                ) THEN
+                    ALTER TABLE roles RENAME COLUMN permission TO permissions;
+                END IF;
+                
+                -- Ensure permissions column exists
+                BEGIN
+                    ALTER TABLE roles ADD COLUMN permissions TEXT[];
+                EXCEPTION
+                    WHEN duplicate_column THEN NULL;
+                END;
+            END $$;
+        `);
+
+        // Check if default roles exist
+        const rolesCheck = await pool.query("SELECT COUNT(*) FROM roles");
+        if (parseInt(rolesCheck.rows[0].count) === 0) {
+            await pool.query(`
+                INSERT INTO roles (name, description, permissions) VALUES 
+                ('Super Admin', 'Full access to all system features', ARRAY['all']),
+                ('Admin', 'Administrative access', ARRAY['manage_users', 'manage_content']),
+                ('User', 'Standard user access', ARRAY['read_content']);
+            `);
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Error ensuring roles table:', error);
+        throw error;
+    }
+}
+
+// GET /api/users - Fetch all users
 app.get('/api/users', async (req, res) => {
     try {
-        const result = await pool.query('SELECT id, name, email, role, status, avatar FROM users ORDER BY id ASC');
+        await ensureUsersTable();
+        const result = await pool.query('SELECT id, name, email, role, status, avatar, username FROM users ORDER BY id ASC');
         res.json(result.rows);
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Internal server error' });
+        console.error('GET /api/users error:', err);
+        res.status(500).json({ error: 'Internal server error', details: err.message });
     }
 });
 
+// POST /api/users - Create new user
 app.post('/api/users', async (req, res) => {
-    const { name, email, role, status } = req.body;
+    const { name, email, role, status, username, password } = req.body;
+
+    // Validation
+    if (!name || !username || !password) {
+        return res.status(400).json({ error: 'Name, username, and password are required' });
+    }
+
     try {
+        await ensureUsersTable();
+
         const result = await pool.query(
-            'INSERT INTO users (name, email, role, status) VALUES ($1, $2, $3, $4) RETURNING *',
-            [name, email, role, status]
+            'INSERT INTO users (name, email, role, status, username, password) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, name, email, role, status, username',
+            [name, email, role || 'User', status || 'Active', username, password]
         );
         res.json(result.rows[0]);
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Internal server error' });
+        console.error('POST /api/users error:', err);
+        if (err.code === '23505') {
+            return res.status(409).json({ error: 'Email atau Username sudah digunakan' });
+        }
+        res.status(500).json({ error: 'Internal server error', details: err.message });
     }
 });
 
+// PUT /api/users/:id - Update user
+app.put('/api/users/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, email, role, status, username, password } = req.body;
+
+    // Validation
+    if (!name || !username) {
+        return res.status(400).json({ error: 'Name and username are required' });
+    }
+
+    try {
+        await ensureUsersTable();
+
+        let query = '';
+        let params = [];
+
+        if (password && password.trim() !== '') {
+            // Update with password
+            query = `UPDATE users SET name=$1, email=$2, role=$3, status=$4, username=$5, password=$6, updated_at=NOW() WHERE id=$7 RETURNING id, name, email, role, status, username`;
+            params = [name, email, role, status, username, password, id];
+        } else {
+            // Update without password
+            query = `UPDATE users SET name=$1, email=$2, role=$3, status=$4, username=$5, updated_at=NOW() WHERE id=$6 RETURNING id, name, email, role, status, username`;
+            params = [name, email, role, status, username, id];
+        }
+
+        const result = await pool.query(query, params);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('PUT /api/users/:id error:', err);
+        if (err.code === '23505') {
+            return res.status(409).json({ error: 'Email atau Username sudah digunakan' });
+        }
+        res.status(500).json({ error: 'Internal server error', details: err.message });
+    }
+});
+
+// DELETE /api/users/:id - Delete user
+app.delete('/api/users/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query('DELETE FROM users WHERE id = $1 RETURNING *', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        res.json({ message: 'User deleted successfully' });
+    } catch (err) {
+        console.error('DELETE /api/users/:id error:', err);
+        res.status(500).json({ error: 'Internal server error', details: err.message });
+    }
+});
+
+// POST /api/auth/login - User login
+app.post('/api/auth/login', async (req, res) => {
+    const { username, password } = req.body;
+
+    // Validation
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Username dan password harus diisi' });
+    }
+
+    try {
+        await ensureUsersTable();
+
+        // Verify User
+        const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+        const user = result.rows[0];
+
+        if (!user) {
+            return res.status(401).json({ error: 'Username tidak ditemukan' });
+        }
+
+        // Simple password check (In production, use bcrypt.compare)
+        if (user.password !== password) {
+            return res.status(401).json({ error: 'Password salah' });
+        }
+
+        if (user.status !== 'Active') {
+            return res.status(403).json({ error: 'Akun dinonaktifkan' });
+        }
+
+        // Return user data (excluding password)
+        const { password: _, ...userWithoutPassword } = user;
+        res.json({
+            message: 'Login successful',
+            user: userWithoutPassword
+        });
+
+    } catch (err) {
+        console.error('POST /api/auth/login error:', err);
+        res.status(500).json({ error: 'Internal server error', details: err.message });
+    }
+});
+
+// ============================================
+// ROLES MANAGEMENT ENDPOINTS
+// ============================================
+
+// GET /api/roles - Fetch all roles
 app.get('/api/roles', async (req, res) => {
     try {
+        await ensureRolesTable();
         const result = await pool.query('SELECT * FROM roles ORDER BY id ASC');
         res.json(result.rows);
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Internal server error' });
+        console.error('GET /api/roles error:', err);
+        res.status(500).json({ error: 'Internal server error', details: err.message });
+    }
+});
+
+// POST /api/roles - Create new role
+app.post('/api/roles', async (req, res) => {
+    const { name, description, permissions } = req.body;
+
+    // Validation
+    if (!name) {
+        return res.status(400).json({ error: 'Role name is required' });
+    }
+
+    try {
+        await ensureRolesTable();
+
+        const result = await pool.query(
+            'INSERT INTO roles (name, description, permissions) VALUES ($1, $2, $3) RETURNING *',
+            [name, description || '', permissions || []]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('POST /api/roles error:', err);
+        if (err.code === '23505') {
+            return res.status(409).json({ error: 'Role name already exists' });
+        }
+        res.status(500).json({ error: 'Internal server error', details: err.message });
+    }
+});
+
+// PUT /api/roles/:id - Update role
+app.put('/api/roles/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, description, permissions } = req.body;
+
+    // Validation
+    if (!name) {
+        return res.status(400).json({ error: 'Role name is required' });
+    }
+
+    try {
+        await ensureRolesTable();
+
+        const result = await pool.query(
+            'UPDATE roles SET name = $1, description = $2, permissions = $3, updated_at = NOW() WHERE id = $4 RETURNING *',
+            [name, description || '', permissions || [], id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Role not found' });
+        }
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('PUT /api/roles/:id error:', err);
+        if (err.code === '23505') {
+            return res.status(409).json({ error: 'Role name already exists' });
+        }
+        res.status(500).json({ error: 'Internal server error', details: err.message });
+    }
+});
+
+// DELETE /api/roles/:id - Delete role
+app.delete('/api/roles/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query('DELETE FROM roles WHERE id = $1 RETURNING *', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Role not found' });
+        }
+        res.json({ message: 'Role deleted successfully' });
+    } catch (err) {
+        console.error('DELETE /api/roles/:id error:', err);
+        res.status(500).json({ error: 'Internal server error', details: err.message });
     }
 });
 
