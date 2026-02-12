@@ -102,6 +102,15 @@ function MasterAsset() {
     };
     // -------------------------------
 
+    const detectAssetType = (folder) => {
+        if (!folder) return 'tanah';
+        const name = folder.name.toLowerCase();
+        if (name.includes('rumah negara') || name.includes('bangunan') || name.includes('rumneg')) {
+            return 'bangunan';
+        }
+        return 'tanah';
+    };
+
     // Helper function untuk format currency (Rupiah)
     const formatCurrency = (value) => {
         if (value === undefined || value === null || value === '') return '-';
@@ -167,9 +176,20 @@ function MasterAsset() {
 
             const rawData = XLSX.utils.sheet_to_json(ws, { header: 1 });
 
-            if (rawData.length > 0) {
-                const headerRow = rawData[0];
-                const contentRows = rawData.slice(1);
+            // Find Header Row (Scan first 20 rows)
+            let headerRowIndex = 0;
+            for (let i = 0; i < Math.min(20, rawData.length); i++) {
+                const rowStr = JSON.stringify(rawData[i]).toUpperCase();
+                // Check for mandatory or common columns
+                if (rowStr.includes('NAMA') || rowStr.includes('NAME') || rowStr.includes('PERUMAHAN') || (rowStr.includes('NO') && (rowStr.includes('ASSET') || rowStr.includes('URUT')))) {
+                    headerRowIndex = i;
+                    break;
+                }
+            }
+
+            if (rawData.length > headerRowIndex) {
+                const headerRow = rawData[headerRowIndex];
+                const contentRows = rawData.slice(headerRowIndex + 1);
 
                 setHeaders(headerRow);
                 setData(contentRows);
@@ -230,9 +250,26 @@ function MasterAsset() {
                 }
             });
 
-            // 2. Set 'name' field from nama_barang or any nama field
-            if (!asset.name) {
-                asset.name = asset.nama_barang || asset.nama_asset || '';
+            // 2. Set 'name' field appropriately based on asset type
+            // For Building Assets: name = area (perumahan/complex)
+            // For Land Assets: name = nama_barang
+            const assetType = detectAssetType(currentFolder);
+
+            if (assetType === 'bangunan') {
+                // Building: name should be the area/complex, not occupant name
+                if (!asset.name) {
+                    asset.name = asset.area || asset.occupant_name || `Building ${rowIndex + 1}`;
+                }
+                // Don't override nama_barang for buildings - it's not the primary identifier
+            } else {
+                // Land/Other: name comes from nama_barang
+                if (!asset.name) {
+                    asset.name = asset.nama_barang || asset.nama_asset || asset.area || '';
+                }
+                // Ensure nama_barang is set if name exists (for consistent display)
+                if (asset.name && !asset.nama_barang) {
+                    asset.nama_barang = asset.name;
+                }
             }
 
             // 3. Set category from jenis_bmn or default
@@ -300,8 +337,11 @@ function MasterAsset() {
         setImporting(true);
         setImportProgress({ current: 0, total: transformed.length, status: 'Memulai import...' });
 
+        const assetType = detectAssetType(currentFolder);
+        const endpoint = assetType === 'bangunan' ? '/api/assets/bangunan/bulk-upsert' : '/api/assets/tanah/bulk-upsert';
+
         try {
-            const response = await fetch('/api/assets/tanah/bulk-upsert', {
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -482,7 +522,7 @@ function MasterAsset() {
                             style={{ display: 'none' }}
                         />
                         <button
-                            onClick={downloadTemplate}
+                            onClick={() => downloadTemplate(detectAssetType(currentFolder))}
                             className="btn btn-outline"
                             style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                             disabled={importing}
@@ -823,6 +863,7 @@ function MasterAsset() {
                     <MasterAssetList
                         key={refreshKey}
                         folderId={currentFolder?.id}
+                        assetType={detectAssetType(currentFolder)}
                     />
                 </div>
             )}

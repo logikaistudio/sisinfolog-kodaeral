@@ -7,7 +7,6 @@ const DashboardPimpinan = ({ setCurrentPage }) => {
         faslan: {
             totalTanah: 0,
             totalKapling: 0,
-            totalBangunan: 0,
             totalPemanfaatan: 0,
             totalKompensasi: 0
         },
@@ -30,10 +29,9 @@ const DashboardPimpinan = ({ setCurrentPage }) => {
                 setLoading(true)
 
                 // Fetch Faslan Data
-                const [tanah, kapling, bangunan, pemanfaatan, faslabuh] = await Promise.all([
+                const [tanah, kapling, pemanfaatan, faslabuh] = await Promise.all([
                     fetch('http://localhost:3001/api/assets/tanah').then(r => r.json()),
                     fetch('http://localhost:3001/api/assets/kapling').then(r => r.json()),
-                    fetch('http://localhost:3001/api/assets/bangunan').then(r => r.json()),
                     fetch('http://localhost:3001/api/assets/pemanfaatan').then(r => r.json()),
                     fetch('http://localhost:3001/api/faslabuh').then(r => r.json()).catch(() => [])
                 ])
@@ -55,7 +53,6 @@ const DashboardPimpinan = ({ setCurrentPage }) => {
                     faslan: {
                         totalTanah: tanah.length,
                         totalKapling: kapling.length,
-                        totalBangunan: bangunan.length,
                         totalPemanfaatan: pemanfaatan.length,
                         totalKompensasi
                     },
@@ -105,14 +102,7 @@ const DashboardPimpinan = ({ setCurrentPage }) => {
             color: '#0ea5e9',
             onClick: () => setCurrentPage('faslan-tanah')
         },
-        {
-            label: 'Total Aset Bangunan',
-            value: formatNumber(dashboardData.faslan.totalBangunan),
-            unit: 'Bangunan',
-            icon: '🏢',
-            color: '#8b5cf6',
-            onClick: () => setCurrentPage('faslan-bangunan')
-        },
+
         {
             label: 'Pemanfaatan Aset',
             value: formatNumber(dashboardData.faslan.totalPemanfaatan),
@@ -140,7 +130,6 @@ const DashboardPimpinan = ({ setCurrentPage }) => {
             items: [
                 { label: 'Aset Tanah', value: dashboardData.faslan.totalTanah, page: 'faslan-tanah' },
                 { label: 'Aset Kapling', value: dashboardData.faslan.totalKapling, page: 'faslan-kapling' },
-                { label: 'Aset Bangunan', value: dashboardData.faslan.totalBangunan, page: 'faslan-bangunan' },
                 { label: 'Pemanfaatan Aset', value: dashboardData.faslan.totalPemanfaatan, page: 'faslan-kerjasama' }
             ]
         },
@@ -315,7 +304,6 @@ const DashboardPimpinan = ({ setCurrentPage }) => {
                     {[
                         { label: 'Peta Faslan', icon: '🗺️', page: 'faslan-peta', color: '#0ea5e9' },
                         { label: 'Aset Tanah', icon: '⛰️', page: 'faslan-tanah', color: '#10b981' },
-                        { label: 'Aset Bangunan', icon: '🏢', page: 'faslan-bangunan', color: '#8b5cf6' },
                         { label: 'Pemanfaatan Aset', icon: '🤝', page: 'faslan-kerjasama', color: '#f59e0b' },
                         { label: 'Faslabuh', icon: '⚓', page: 'faslan-faslabuh', color: '#0066cc' },
                         { label: 'Master Data', icon: '⚙️', page: 'master-asset', color: '#64748b' }

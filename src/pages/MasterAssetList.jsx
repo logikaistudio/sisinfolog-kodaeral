@@ -5,7 +5,7 @@ import PropTypes from 'prop-types';
  * Master Asset List - Menampilkan daftar asset dari database
  * Tabel lengkap dengan inline editing
  */
-function MasterAssetList({ folderId }) {
+function MasterAssetList({ folderId, assetType = 'tanah' }) {
     const [assets, setAssets] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -19,7 +19,7 @@ function MasterAssetList({ folderId }) {
     const fetchAssets = async () => {
         setLoading(true);
         try {
-            let url = '/api/assets/tanah';
+            let url = assetType === 'bangunan' ? '/api/assets/bangunan' : '/api/assets/tanah';
             if (folderId) {
                 url += `?folder_id=${folderId}`;
             }
@@ -83,7 +83,8 @@ function MasterAssetList({ folderId }) {
     // Save changes
     const handleSave = async () => {
         try {
-            const response = await fetch(`/api/assets/tanah/${editingId}`, {
+            const endpoint = assetType === 'bangunan' ? `/api/assets/bangunan/${editingId}` : `/api/assets/tanah/${editingId}`;
+            const response = await fetch(endpoint, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(editedData)
@@ -116,7 +117,8 @@ function MasterAssetList({ folderId }) {
         if (!confirm('⚠️ Yakin ingin menghapus data ini?')) return;
 
         try {
-            const response = await fetch(`/api/assets/tanah/${id}`, {
+            const endpoint = assetType === 'bangunan' ? `/api/assets/bangunan/${id}` : `/api/assets/tanah/${id}`;
+            const response = await fetch(endpoint, {
                 method: 'DELETE'
             });
 
@@ -158,8 +160,8 @@ function MasterAssetList({ folderId }) {
         );
     }
 
-    // Define editable columns (no actions column) - sesuai tabel sumber
-    const columns = [
+    // Define editable columns based on assetType
+    const columnsTanah = [
         { key: 'no', label: 'No', width: 40, align: 'center', type: 'number', editable: false },
         { key: 'jenis_bmn', label: 'Jenis BMN', width: 90, type: 'text', editable: true },
         { key: 'kode_barang', label: 'Kode Barang', width: 120, type: 'code', editable: true },
@@ -181,14 +183,60 @@ function MasterAssetList({ folderId }) {
         { key: 'provinsi', label: 'Provinsi', width: 110, type: 'text', editable: true },
     ];
 
+    const columnsBangunan = [
+        { key: 'no', label: 'NO', width: 40, align: 'center', type: 'number', editable: false },
+        { key: 'occupant_info', label: 'NAMA\nPANGKAT/KORPS\nNRP/NIP', width: 250, type: 'text', editable: false, multiline: true },
+        { key: 'area', label: 'PERUMAHAN', width: 200, type: 'text', editable: true },
+        { key: 'alamat_detail', label: 'ALAMAT', width: 200, type: 'text', editable: true },
+        { key: 'status_penghuni', label: 'STATUS PENGHUNI', width: 120, type: 'text', editable: true },
+        { key: 'sip_info', label: 'NO SIP /\nTANGGAL', width: 150, type: 'text', editable: false, multiline: true },
+        { key: 'tipe_rumah', label: 'Tipe', width: 60, type: 'text', editable: true },
+        { key: 'golongan', label: 'Gol', width: 50, type: 'text', editable: true },
+        { key: 'tahun_buat', label: 'TAHUN BUAT', width: 80, type: 'number', editable: true },
+        { key: 'asal_perolehan', label: 'ASAL PEROLEHAN', width: 120, type: 'text', editable: true },
+        { key: 'mendapat_fasdin', label: 'MENDAPAT FASDIN', width: 100, type: 'text', editable: true },
+        { key: 'kondisi', label: 'KONDISI', width: 100, type: 'select', editable: true, options: ['Baik', 'Rusak Ringan', 'Rusak Berat'] },
+        { key: 'keterangan', label: 'KETERANGAN', width: 150, type: 'text', editable: true },
+    ];
+
+    const columns = assetType === 'bangunan' ? columnsBangunan : columnsTanah;
+
     const getCellValue = (asset, col, index) => {
         if (col.key === 'no') return index + 1;
 
+        // Custom composite columns for Bangunan
+        if (assetType === 'bangunan') {
+            if (col.key === 'occupant_info') {
+                const parts = [
+                    asset.occupant_name,
+                    asset.occupant_rank,
+                    asset.occupant_nrp
+                ].filter(p => p && p !== '-');
+                return parts.length > 0 ? parts.join(' / ') : '-';
+            }
+            if (col.key === 'sip_info') {
+                const parts = [
+                    asset.no_sip,
+                    formatDate(asset.tgl_sip)
+                ].filter(p => p && p !== '-' && p !== 'NaN/NaN/NaN');
+                return parts.length > 0 ? parts.join(' / ') : '-';
+            }
+        }
+
         let value = asset[col.key];
 
-        // Fallback for renamed fields
-        if (col.key === 'nama_barang' && !value) {
-            value = asset.name || '-';
+        // name priority: name > nama_barang > area
+        if (col.key === 'name') {
+            value = asset.name || asset.nama_barang || asset.area || '-';
+        }
+
+        if (col.key === 'area') {
+            value = asset.area || '-';
+        }
+
+        // nama_barang priority
+        if (col.key === 'nama_barang') {
+            value = asset.nama_barang || asset.name || '-';
         }
 
         if (col.key === 'luas_tanah' && !value) {
@@ -306,7 +354,9 @@ function MasterAssetList({ folderId }) {
                                                     position: 'sticky',
                                                     top: 0,
                                                     zIndex: 10,
-                                                    borderBottom: '2px solid #001a33'
+                                                    borderBottom: '2px solid #001a33',
+                                                    whiteSpace: col.multiline ? 'pre-wrap' : 'nowrap',
+                                                    verticalAlign: 'middle'
                                                 }}
                                             >
                                                 {col.label}
@@ -356,8 +406,10 @@ function MasterAssetList({ folderId }) {
                                                                 color: '#334155',
                                                                 borderBottom: '1px solid #f1f5f9',
                                                                 textAlign: col.align || 'left',
-                                                                verticalAlign: 'middle',
-                                                                position: 'relative'
+                                                                verticalAlign: 'top',
+                                                                position: 'relative',
+                                                                whiteSpace: col.multiline ? 'pre-wrap' : 'nowrap',
+                                                                lineHeight: col.multiline ? '1.4' : 'normal'
                                                             }}
                                                             onClick={(e) => isEditing && e.stopPropagation()}
                                                         >
@@ -527,7 +579,8 @@ function MasterAssetList({ folderId }) {
 }
 
 MasterAssetList.propTypes = {
-    folderId: PropTypes.number
+    folderId: PropTypes.number,
+    assetType: PropTypes.oneOf(['tanah', 'bangunan'])
 };
 
 export default MasterAssetList;

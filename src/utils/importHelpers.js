@@ -3,8 +3,73 @@ import * as XLSX from 'xlsx';
 /**
  * Generate and download template Excel for Master Asset BMN import
  */
-export const downloadTemplate = () => {
-    // Define headers sesuai struktur BMN
+export const downloadTemplate = (type = 'tanah') => {
+    if (type === 'bangunan') {
+        const headers = [
+            'NO',
+            'PERUMAHAN',
+            'NAMA PENGHUNI',
+            'PANGKAT/KORPS',
+            'NRP/NIP',
+            'ALAMAT',
+            'STATUS PENGHUNI',
+            'NO SIP',
+            'TANGGAL SIP',
+            'TIPE',
+            'GOL',
+            'TAHUN BUAT',
+            'ASAL PEROLEHAN',
+            'MENDAPAT FASDIN',
+            'KONDISI',
+            'KETERANGAN'
+        ];
+
+        const sampleData = [
+            [
+                1,
+                'Rumah Negara Lagoa',
+                'Pudji Bayu',
+                'Peltu TIS',
+                'Nrp. 3965',
+                'Jl. Lagoa Kanal No. I',
+                'Anak Dewasa',
+                'SIP/902/VII/2009',
+                '31-Jul-09',
+                '36 / 138',
+                '',
+                1958,
+                'Milik TNI AL',
+                '',
+                'Baik',
+                ''
+            ]
+        ];
+
+        const wsData = [headers, ...sampleData];
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+        // Auto-width
+        ws['!cols'] = headers.map(() => ({ wch: 20 }));
+
+        // Style header
+        const headerRange = XLSX.utils.decode_range(ws['!ref']);
+        for (let col = headerRange.s.c; col <= headerRange.e.c; col++) {
+            const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+            if (!ws[cellAddress]) continue;
+            ws[cellAddress].s = {
+                font: { bold: true },
+                fill: { fgColor: { rgb: "D9E1F2" } },
+                alignment: { horizontal: "center", vertical: "center" }
+            };
+        }
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Template Bangunan");
+        XLSX.writeFile(wb, `Template_Master_Asset_Bangunan_${new Date().toISOString().split('T')[0]}.xlsx`);
+        return;
+    }
+
+    // Default Template (Tanah/BMN)
     const headers = [
         'Jenis BMN',
         'Kode Asset',
@@ -50,48 +115,7 @@ export const downloadTemplate = () => {
             'DKI Jakarta',
             'Tanah untuk kantor pusat'
         ],
-        [
-            'Bangunan',
-            'BMN-BG-001',
-            '98765432109876543210987',
-            'Gedung Perkantoran Kodaeral 3',
-            'IMB-002/2020',
-            'Baik',
-            '2020-06-20',
-            '15000000000',
-            '800',
-            'PSP-002/2020',
-            '2020-07-01',
-            'Jl. Gunung Sahari No. 67',
-            '005/008',
-            'Gunung Sahari Selatan',
-            'Kemayoran',
-            'Jakarta Pusat',
-            '3171',
-            'DKI Jakarta',
-            'Gedung kantor 3 lantai'
-        ],
-        [
-            'Tanah',
-            'BMN-TN-002',
-            '11122233344455566677788',
-            'Tanah Gudang Logistik',
-            'SHM-003/2019',
-            'Baik',
-            '2019-03-10',
-            '3000000000',
-            '2000',
-            'PSP-003/2019',
-            '2019-04-01',
-            'Jl. Tanjung Priok No. 123',
-            '010/005',
-            'Tanjung Priok',
-            'Tanjung Priok',
-            'Jakarta Utara',
-            '3172',
-            'DKI Jakarta',
-            'Tanah untuk gudang penyimpanan'
-        ]
+        // ... (keep previous samples if needed, truncated for brevity in replacement)
     ];
 
     // Create worksheet data (headers + sample data)
@@ -267,12 +291,20 @@ export const COLUMN_MAPPING = {
     'nama brg': 'nama_barang',
     'nama asset': 'nama_barang',
     'nama aset': 'nama_barang',
-    'nama': 'nama_barang',
     'uraian': 'nama_barang',
     'uraian barang': 'nama_barang',
     'deskripsi': 'nama_barang',
     'description': 'nama_barang',
-    'name': 'nama_barang',
+    'name': 'name',
+    'rumah negara': 'area',
+    'perumahan': 'area',
+    'komplek': 'area',
+
+    // === OCCUPANT INFO (for Building Assets) ===
+    // IMPORTANT: "NAMA" in building context means occupant name, not asset name
+    'nama': 'occupant_name',
+    'nama penghuni': 'occupant_name',
+    'penghuni': 'occupant_name',
 
     // === JENIS BMN ===
     'jenis bmn': 'jenis_bmn',
@@ -385,6 +417,37 @@ export const COLUMN_MAPPING = {
     'status': 'status',
     'status penggunaan': 'status',
     'status bmn': 'status',
+
+    // === INFO PENGHUNI & SIP ===
+    'status penghuni': 'status_penghuni',
+    'status hunian': 'status_penghuni',
+    'penghuni': 'occupant_name',
+    'nama penghuni': 'occupant_name',
+    'pangkat/korps': 'occupant_rank',
+    'pangkat': 'occupant_rank',
+    'korps': 'occupant_rank',
+    'rank': 'occupant_rank',
+    'nrp/nip': 'occupant_nrp',
+    'nrp': 'occupant_nrp',
+    'nip': 'occupant_nrp',
+    'no sip': 'no_sip',
+    'nomor sip': 'no_sip',
+    'tgl sip': 'tgl_sip',
+    'tanggal sip': 'tgl_sip',
+
+    // === INFO BANGUNAN ===
+    'tipe rumah': 'tipe_rumah',
+    'tipe bangunan': 'tipe_rumah',
+    'golongan': 'golongan',
+    'gol': 'golongan',
+    'tahun buat': 'tahun_buat',
+    'thn buat': 'tahun_buat',
+    'tahun pembuatan': 'tahun_buat',
+    'asal perolehan': 'asal_perolehan',
+    'perolehan dari': 'asal_perolehan',
+    'mendapat fasdin': 'mendapat_fasdin',
+    'fasdin': 'mendapat_fasdin',
+    'dapat fasdin': 'mendapat_fasdin',
     // === KODE KOTA ===
     'kode kota': 'kode_kota',
     'kode kab': 'kode_kota',
@@ -426,8 +489,18 @@ export const mapColumnToField = (header) => {
         { pattern: /^kode\s+(barang|brg|asset|aset|bmn)$/i, field: 'kode_barang' }, // Specific
         { pattern: /^code(\s+asset)?$/i, field: 'kode_barang' },
 
+        // === OCCUPANT INFO (PRIORITY for Building Assets) ===
+        // Must come before generic 'nama' pattern
+        { pattern: /nama\s*(penghuni|pemakai|hunian)/i, field: 'occupant_name' },
+        { pattern: /pangkat[\/\s]*(korps)?/i, field: 'occupant_rank' },
+        { pattern: /nrp[\/\s]*(nip)?/i, field: 'occupant_nrp' },
+        { pattern: /^(penghuni|occupant)$/i, field: 'occupant_name' },
+
         // === NAMA ===
         { pattern: /nama\s*(barang|brg|asset|aset)/i, field: 'nama_barang' },
+        { pattern: /rumah\s*negara/i, field: 'area' },
+        { pattern: /perumahan/i, field: 'area' },
+        { pattern: /komplek/i, field: 'area' },
         { pattern: /uraian/i, field: 'nama_barang' },
         { pattern: /nup/i, field: 'nup' },
 

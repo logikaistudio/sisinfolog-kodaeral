@@ -3,7 +3,7 @@ import { useState } from 'react'
 
 function Sidebar({ currentPage, setCurrentPage, collapsed, setCollapsed, mobileOpen, setMobileOpen, onLogout, user }) {
     // State untuk menyimpan ID menu yang sedang expanded (bisa multiple levels)
-    const [expandedMenus, setExpandedMenus] = useState(['faslan', 'fastanah-parent'])
+    const [expandedMenus, setExpandedMenus] = useState(['faslan', 'fastanah-parent', 'faslan-rumneg-parent'])
 
     const menuItems = [
         {
@@ -26,7 +26,14 @@ function Sidebar({ currentPage, setCurrentPage, collapsed, setCollapsed, mobileO
                     children: [
                         { id: 'faslan-tanah', label: 'Aset Tanah', icon: '⛰️' },
                         { id: 'faslan-kapling', label: 'Aset Kapling', icon: '🏕️' },
-                        { id: 'faslan-bangunan', label: 'Aset Bangunan', icon: '🏢' },
+                        {
+                            id: 'faslan-rumneg-parent',
+                            label: 'Aset Rumah Negara',
+                            icon: '🏠',
+                            children: [
+                                { id: 'faslan-rumneg-lagoa', label: 'Rumneg Lagoa', icon: '🏘️' }
+                            ]
+                        },
                         { id: 'faslan-kerjasama', label: 'Pemanfaatan Aset', icon: '🤝' }
                     ]
                 },
@@ -49,6 +56,12 @@ function Sidebar({ currentPage, setCurrentPage, collapsed, setCollapsed, mobileO
             description: 'Satuan Pemeliharaan Pangkalan'
         },
         {
+            id: 'diskes',
+            label: 'Fasilitas Kesehatan',
+            icon: '🏥',
+            description: 'DisKes'
+        },
+        {
             id: 'disbek',
             label: 'Fasilitas Pembekalan',
             icon: '📦',
@@ -66,7 +79,8 @@ function Sidebar({ currentPage, setCurrentPage, collapsed, setCollapsed, mobileO
             icon: '⚙️',
             description: 'Data Master',
             children: [
-                { id: 'master-asset', label: 'Asset', icon: '📦' }
+                { id: 'master-asset', label: 'Asset', icon: '📦' },
+                { id: 'master-rumneg', label: 'Aset Rumneg', icon: '🏠' }
             ]
         },
         {

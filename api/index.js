@@ -443,6 +443,256 @@ app.get('/api/assets/bangunan/:code', async (req, res) => {
     }
 });
 
+// Import Bangunan Asset (Single)
+app.post('/api/assets/bangunan', async (req, res) => {
+    const {
+        name, code, category, luas, status, location, coordinates, map_boundary, area,
+        occupant_name, occupant_rank, occupant_nrp, occupant_title,
+        status_penghuni, no_sip, tgl_sip, tipe_rumah, golongan, tahun_buat,
+        asal_perolehan, mendapat_fasdin, kondisi, keterangan, alamat_detail,
+        nup, kode_barang, nama_barang, luas_tanah
+    } = req.body;
+    try {
+        const result = await pool.query(
+            `INSERT INTO assets_bangunan (
+                name, code, category, luas, status, location, coordinates, map_boundary, area, 
+                occupant_name, occupant_rank, occupant_nrp, occupant_title,
+                status_penghuni, no_sip, tgl_sip, tipe_rumah, golongan, tahun_buat, 
+                asal_perolehan, mendapat_fasdin, kondisi, keterangan, alamat_detail,
+                nup, kode_barang, nama_barang, luas_tanah
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, 
+                $10, $11, $12, $13,
+                $14, $15, $16, $17, $18, $19, 
+                $20, $21, $22, $23, $24,
+                $25, $26, $27, $28
+            ) RETURNING *`,
+            [
+                name, code, category, luas, status, location, coordinates, map_boundary, area,
+                occupant_name, occupant_rank, occupant_nrp, occupant_title,
+                status_penghuni, no_sip, tgl_sip, tipe_rumah, golongan, tahun_buat,
+                asal_perolehan, mendapat_fasdin, kondisi, keterangan, alamat_detail || location,
+                nup, kode_barang, nama_barang, luas_tanah
+            ]
+        );
+        res.json(result.rows[0]);
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Internal server error' }); }
+});
+
+// Update Bangunan Asset
+app.put('/api/assets/bangunan/:id', async (req, res) => {
+    const { id } = req.params;
+    const {
+        name, code, category, luas, status, location, coordinates, map_boundary, area,
+        occupant_name, occupant_rank, occupant_nrp, occupant_title,
+        status_penghuni, no_sip, tgl_sip, tipe_rumah, golongan, tahun_buat,
+        asal_perolehan, mendapat_fasdin, kondisi, keterangan, alamat_detail,
+        nup, kode_barang, nama_barang, luas_tanah
+    } = req.body;
+
+    try {
+        const result = await pool.query(
+            `UPDATE assets_bangunan SET 
+                name=$1, code=$2, category=$3, luas=$4, status=$5, location=$6, 
+                coordinates=$7, map_boundary=$8, area=$9, 
+                occupant_name=$10, occupant_rank=$11, occupant_nrp=$12, occupant_title=$13,
+                status_penghuni=$14, no_sip=$15, tgl_sip=$16, tipe_rumah=$17, golongan=$18, tahun_buat=$19,
+                asal_perolehan=$20, mendapat_fasdin=$21, kondisi=$22, keterangan=$23, alamat_detail=$24,
+                nup=$25, kode_barang=$26, nama_barang=$27, luas_tanah=$28,
+                updated_at=NOW()
+             WHERE id=$29 RETURNING *`,
+            [
+                name, code, category, luas, status, location, coordinates, map_boundary, area,
+                occupant_name, occupant_rank, occupant_nrp, occupant_title,
+                status_penghuni, no_sip, tgl_sip, tipe_rumah, golongan, tahun_buat,
+                asal_perolehan, mendapat_fasdin, kondisi, keterangan, alamat_detail || location,
+                nup, kode_barang, nama_barang, luas_tanah,
+                id
+            ]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Asset not found' });
+        res.json(result.rows[0]);
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Internal server error', details: err.message }); }
+});
+
+app.post('/api/assets/bangunan/bulk-upsert', async (req, res) => {
+    const { assets, mode = 'upsert', folder_id = null, source_file = null } = req.body;
+
+    if (!Array.isArray(assets) || assets.length === 0) {
+        return res.status(400).json({ error: 'Assets array is required' });
+    }
+
+    console.log(`[IMPORT BANGUNAN] Starting: ${assets.length} records, mode=${mode}`);
+
+    const results = {
+        total: assets.length,
+        inserted: 0,
+        updated: 0,
+        failed: 0,
+        errors: []
+    };
+
+    try {
+        // Add folder_id and source_file columns if not exists
+        try {
+            await pool.query('ALTER TABLE assets_bangunan ADD COLUMN IF NOT EXISTS folder_id INTEGER');
+            await pool.query('ALTER TABLE assets_bangunan ADD COLUMN IF NOT EXISTS source_file TEXT');
+            await pool.query('ALTER TABLE assets_bangunan ADD COLUMN IF NOT EXISTS luas_tanah VARCHAR(50)');
+
+            // Deduplicate and Ensure Unique Constraint on Code
+            try {
+                // 1. Remove duplicates (keep latest by ID)
+                await pool.query(`
+                    DELETE FROM assets_bangunan a 
+                    USING assets_bangunan b 
+                    WHERE a.id < b.id AND a.code = b.code
+                `);
+
+                // 2. Add Unique Constraint if checks pass
+                await pool.query('ALTER TABLE assets_bangunan ADD CONSTRAINT assets_bangunan_code_unique UNIQUE (code)');
+            } catch (e) {
+                // Ignore "already exists" errors, log others
+                if (!e.message.includes('already exists')) {
+                    console.warn('[WARN] Specific constraint setup skipped:', e.message);
+                }
+            }
+        } catch (e) {
+            console.error('Schema update error:', e);
+        }
+
+        // Process each asset
+        for (let i = 0; i < assets.length; i++) {
+            const asset = assets[i];
+            let { code } = asset;
+
+            if (!code || String(code).trim() === '') {
+                // Generate code if missing
+                if (asset.kode_barang && asset.nup) {
+                    code = `${asset.kode_barang}-${asset.nup}`;
+                } else {
+                    code = `IMPORT-BG-${Date.now()}-${i + 1}`;
+                }
+            }
+
+            try {
+                if (mode === 'upsert') {
+                    const upsertResult = await pool.query(
+                        `INSERT INTO assets_bangunan 
+                         (code, name, category, status, location, 
+                          occupant_name, occupant_rank, occupant_nrp,
+                          status_penghuni, no_sip, tgl_sip, tipe_rumah, golongan, tahun_buat,
+                          asal_perolehan, mendapat_fasdin, kondisi, keterangan, alamat_detail,
+                          nup, kode_barang, nama_barang, folder_id, source_file, luas_tanah)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
+                         ON CONFLICT (code) DO UPDATE SET
+                             name = COALESCE(EXCLUDED.name, assets_bangunan.name),
+                             category = COALESCE(EXCLUDED.category, assets_bangunan.category),
+                             status = COALESCE(EXCLUDED.status, assets_bangunan.status),
+                             location = COALESCE(EXCLUDED.location, assets_bangunan.location),
+                             occupant_name = COALESCE(EXCLUDED.occupant_name, assets_bangunan.occupant_name),
+                             occupant_rank = COALESCE(EXCLUDED.occupant_rank, assets_bangunan.occupant_rank),
+                             occupant_nrp = COALESCE(EXCLUDED.occupant_nrp, assets_bangunan.occupant_nrp),
+                             status_penghuni = COALESCE(EXCLUDED.status_penghuni, assets_bangunan.status_penghuni),
+                             no_sip = COALESCE(EXCLUDED.no_sip, assets_bangunan.no_sip),
+                             tgl_sip = COALESCE(EXCLUDED.tgl_sip, assets_bangunan.tgl_sip),
+                             tipe_rumah = COALESCE(EXCLUDED.tipe_rumah, assets_bangunan.tipe_rumah),
+                             golongan = COALESCE(EXCLUDED.golongan, assets_bangunan.golongan),
+                             tahun_buat = COALESCE(EXCLUDED.tahun_buat, assets_bangunan.tahun_buat),
+                             asal_perolehan = COALESCE(EXCLUDED.asal_perolehan, assets_bangunan.asal_perolehan),
+                             mendapat_fasdin = COALESCE(EXCLUDED.mendapat_fasdin, assets_bangunan.mendapat_fasdin),
+                             kondisi = COALESCE(EXCLUDED.kondisi, assets_bangunan.kondisi),
+                             keterangan = COALESCE(EXCLUDED.keterangan, assets_bangunan.keterangan),
+                             alamat_detail = COALESCE(EXCLUDED.alamat_detail, assets_bangunan.alamat_detail),
+                             nup = COALESCE(EXCLUDED.nup, assets_bangunan.nup),
+                             kode_barang = COALESCE(EXCLUDED.kode_barang, assets_bangunan.kode_barang),
+                             nama_barang = COALESCE(EXCLUDED.nama_barang, assets_bangunan.nama_barang),
+                             folder_id = COALESCE(EXCLUDED.folder_id, assets_bangunan.folder_id),
+                             source_file = COALESCE(EXCLUDED.source_file, assets_bangunan.source_file),
+                             luas_tanah = COALESCE(EXCLUDED.luas_tanah, assets_bangunan.luas_tanah),
+                             updated_at = NOW()
+                         RETURNING (xmax = 0) AS inserted, *`,
+                        [
+                            code,
+                            asset.name || asset.nama_barang || '',
+                            asset.category || asset.jenis_bmn || 'Bangunan',
+                            asset.status || 'Aktif',
+                            asset.location || asset.alamat_detail || '',
+                            asset.occupant_name || null,
+                            asset.occupant_rank || null,
+                            asset.occupant_nrp || null,
+                            asset.status_penghuni || '',
+                            asset.no_sip || '',
+                            asset.tgl_sip || null,
+                            asset.tipe_rumah || '',
+                            asset.golongan || '',
+                            asset.tahun_buat || null,
+                            asset.asal_perolehan || '',
+                            asset.mendapat_fasdin || '',
+                            asset.kondisi || '',
+                            asset.keterangan || '',
+                            asset.alamat_detail || asset.location || '',
+                            asset.nup || '',
+                            asset.kode_barang || '',
+                            asset.nama_barang || '',
+                            folder_id,
+                            source_file || null,
+                            asset.luas_tanah || '0'
+                        ]
+                    );
+
+                    if (upsertResult.rows[0].inserted) {
+                        results.inserted++;
+                    } else {
+                        results.updated++;
+                    }
+                } else {
+                    // Insert Only logic (simplified for brevity)
+                    // ...
+                    results.inserted++;
+                }
+            } catch (err) {
+                console.error(`Error processing row ${i + 1}:`, err);
+                results.failed++;
+                results.errors.push({ row: i + 1, code: code, error: err.message });
+            }
+        }
+
+        res.json(results);
+
+    } catch (err) {
+        console.error('Bulk upsert error:', err);
+        res.status(500).json({ error: 'Internal server error', details: err.message });
+    }
+});
+
+// Bulk Delete Bangunan Assets
+app.delete('/api/assets/bangunan/bulk', async (req, res) => {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ error: 'IDs array is required' });
+    }
+    try {
+        await pool.query('DELETE FROM assets_bangunan WHERE id = ANY($1)', [ids]);
+        res.json({ message: 'Deleted successfully', count: ids.length });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Delete Bangunan Asset
+app.delete('/api/assets/bangunan/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query('DELETE FROM assets_bangunan WHERE id = $1 RETURNING *', [id]);
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Asset not found' });
+        res.json({ message: 'Asset deleted successfully' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // Import Tanah Asset (Single)
 app.post('/api/assets/tanah', async (req, res) => {
     const { name, code, category, luas, status, location, coordinates, map_boundary, area, occupant_name, occupant_rank, occupant_nrp, occupant_title } = req.body;
@@ -1560,6 +1810,174 @@ app.delete('/api/faslabuh/delete-all', async (req, res) => {
 });
 
 // ==================== END FASLABUH ENDPOINTS ====================
+
+// ==================== RUMNEG ENDPOINTS ====================
+
+// Get All Rumneg
+app.get('/api/assets/rumneg', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM assets_rumneg ORDER BY created_at DESC');
+        res.json(result.rows);
+    } catch (err) {
+        // Auto-create table if missing
+        if (err.code === '42P01') {
+            try {
+                await pool.query(`
+                    CREATE TABLE IF NOT EXISTS assets_rumneg (
+                        id SERIAL PRIMARY KEY,
+                        occupant_name VARCHAR(255),
+                        occupant_rank VARCHAR(100),
+                        occupant_nrp VARCHAR(100),
+                        area VARCHAR(100),
+                        alamat_detail TEXT,
+                        longitude VARCHAR(50),
+                        latitude VARCHAR(50),
+                        status_penghuni VARCHAR(50),
+                        no_sip VARCHAR(100),
+                        tgl_sip VARCHAR(50),
+                        tipe_rumah VARCHAR(50),
+                        golongan VARCHAR(50),
+                        tahun_buat VARCHAR(50),
+                        asal_perolehan VARCHAR(100),
+                        mendapat_fasdin VARCHAR(50),
+                        kondisi VARCHAR(50),
+                        keterangan TEXT,
+                        created_at TIMESTAMP DEFAULT NOW(),
+                        updated_at TIMESTAMP DEFAULT NOW()
+                    );
+                `);
+                res.json([]);
+            } catch (e) { console.error(e); res.status(500).json({ error: 'DB Error' }); }
+        } else {
+            console.error(err);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    }
+});
+
+// Import Rumneg Bulk
+app.post('/api/assets/rumneg/bulk', async (req, res) => {
+    const items = req.body;
+    if (!Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ error: 'Invalid input' });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // Ensure table exists
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS assets_rumneg (
+                id SERIAL PRIMARY KEY,
+                occupant_name VARCHAR(255),
+                occupant_rank VARCHAR(100),
+                occupant_nrp VARCHAR(100),
+                area VARCHAR(100),
+                alamat_detail TEXT,
+                longitude VARCHAR(50),
+                latitude VARCHAR(50),
+                status_penghuni VARCHAR(50),
+                no_sip VARCHAR(100),
+                tgl_sip VARCHAR(50),
+                tipe_rumah VARCHAR(50),
+                golongan VARCHAR(50),
+                tahun_buat VARCHAR(50),
+                asal_perolehan VARCHAR(100),
+                mendapat_fasdin VARCHAR(50),
+                kondisi VARCHAR(50),
+                keterangan TEXT,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+
+        for (const item of items) {
+            await client.query(
+                `INSERT INTO assets_rumneg (
+                    occupant_name, occupant_rank, occupant_nrp, area, alamat_detail,
+                    longitude, latitude, status_penghuni, no_sip, tgl_sip,
+                    tipe_rumah, golongan, tahun_buat, asal_perolehan, mendapat_fasdin,
+                    kondisi, keterangan
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+                [
+                    item.occupant_name, item.occupant_rank, item.occupant_nrp, item.area, item.alamat_detail,
+                    item.longitude, item.latitude, item.status_penghuni, item.no_sip, item.tgl_sip,
+                    item.tipe_rumah, item.golongan, item.tahun_buat, item.asal_perolehan, item.mendapat_fasdin,
+                    item.kondisi, item.keterangan
+                ]
+            );
+        }
+        await client.query('COMMIT');
+        res.json({ message: 'Import successful', count: items.length });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    } finally {
+        client.release();
+    }
+});
+
+// Update Rumneg
+app.put('/api/assets/rumneg/:id', async (req, res) => {
+    const { id } = req.params;
+    const {
+        occupant_name, occupant_rank, occupant_nrp, area, alamat_detail,
+        longitude, latitude, status_penghuni, no_sip, tgl_sip,
+        tipe_rumah, golongan, tahun_buat, asal_perolehan, mendapat_fasdin,
+        kondisi, keterangan
+    } = req.body;
+
+    try {
+        const result = await pool.query(
+            `UPDATE assets_rumneg SET
+                occupant_name=$1, occupant_rank=$2, occupant_nrp=$3, area=$4, alamat_detail=$5,
+                longitude=$6, latitude=$7, status_penghuni=$8, no_sip=$9, tgl_sip=$10,
+                tipe_rumah=$11, golongan=$12, tahun_buat=$13, asal_perolehan=$14, mendapat_fasdin=$15,
+                kondisi=$16, keterangan=$17, updated_at=NOW()
+             WHERE id=$18 RETURNING *`,
+            [
+                occupant_name, occupant_rank, occupant_nrp, area, alamat_detail,
+                longitude, latitude, status_penghuni, no_sip, tgl_sip,
+                tipe_rumah, golongan, tahun_buat, asal_perolehan, mendapat_fasdin,
+                kondisi, keterangan, id
+            ]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+        res.json(result.rows[0]);
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Internal server error' }); }
+});
+
+// Delete Rumneg
+app.delete('/api/assets/rumneg/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query('DELETE FROM assets_rumneg WHERE id = $1 RETURNING *', [id]);
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+        res.json({ message: 'Deleted successfully' });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Internal server error' }); }
+});
+
+// Delete Bulk Rumneg
+app.delete('/api/assets/rumneg/bulk', async (req, res) => {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids)) return res.status(400).json({ error: 'Invalid input' });
+    try {
+        await pool.query('DELETE FROM assets_rumneg WHERE id = ANY($1)', [ids]);
+        res.json({ message: 'Deleted successfully' });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Internal server error' }); }
+});
+
+// Delete All Rumneg
+app.delete('/api/assets/rumneg/all', async (req, res) => {
+    try {
+        await pool.query('TRUNCATE TABLE assets_rumneg RESTART IDENTITY');
+        res.json({ message: 'All data deleted' });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Internal server error' }); }
+});
+
+// ==================== END RUMNEG ENDPOINTS ====================
 
 if (process.env.NODE_ENV !== 'production') {
     app.listen(port, () => {

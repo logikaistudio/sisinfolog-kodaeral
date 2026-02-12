@@ -5,6 +5,7 @@ import DashboardPimpinan from './pages/DashboardPimpinan'
 import PetaFaslan from './pages/PetaFaslan'
 import Faslan from './pages/Faslan'
 import DisBek from './pages/DisBek'
+import DisKes from './pages/DisKes'
 import DisAng from './pages/DisAng'
 import Fasharpan from './pages/Fasharpan'
 import Faslabuh from './pages/Faslabuh'
@@ -14,6 +15,8 @@ import Satharkan from './pages/Satharkan'
 import MasterData from './pages/MasterData'
 import MasterAsset from './pages/MasterAsset'
 import MasterAssetList from './pages/MasterAssetList'
+import MasterRumneg from './pages/MasterRumneg'
+import RumnegLagoa from './pages/RumnegLagoa'
 import AssetDetail from './pages/AssetDetail'
 import PengaturanUsers from './pages/PengaturanUsers'
 import PengaturanRoles from './pages/PengaturanRoles'
@@ -87,12 +90,14 @@ function App() {
         return <Faslan type="tanah" />
       case 'faslan-kapling':
         return <Faslan type="kapling" />
-      case 'faslan-bangunan':
-        return <Faslan type="bangunan" />
+      case 'faslan-rumneg-lagoa':
+        return <RumnegLagoa />
       case 'faslan-faslabuh':
         return <Faslabuh />
       case 'faslan-kerjasama':
         return <Kerjasama />
+      case 'diskes':
+        return <DisKes />
       case 'disbek':
         return <DisBek />
       case 'disang':
@@ -110,6 +115,8 @@ function App() {
           setSelectedAssetCode(kodeAsset)
           setCurrentPage('asset-detail')
         }} />
+      case 'master-rumneg':
+        return <MasterRumneg />
       case 'asset-detail':
         return <AssetDetail
           kodeAsset={selectedAssetCode}
