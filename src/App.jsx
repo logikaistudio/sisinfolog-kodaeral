@@ -80,7 +80,7 @@ function App() {
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard-pimpinan':
-        return <DashboardPimpinan />
+        return <DashboardPimpinan setCurrentPage={setCurrentPage} />
       case 'faslan-peta':
         return <PetaFaslan />
       case 'faslan-tanah':

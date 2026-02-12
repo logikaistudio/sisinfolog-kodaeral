@@ -1,30 +1,210 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import PropTypes from 'prop-types'
 
-const DashboardPimpinan = () => {
-    // Mock Data Ringkasan
-    const stats = [
-        { label: 'Total Aset Tanah', value: '128', unit: 'Lokasi', icon: '📍', color: '#0ea5e9' },
-        { label: 'Kondisi Dermaga Baik', value: '85%', unit: 'Siap Operasi', icon: '⚓', color: '#10b981' },
-        { label: 'Fasilitas Pemeliharaan', value: '12', unit: 'Unit Aktif', icon: '🛠️', color: '#f59e0b' },
-        { label: 'Dukungan Logistik', value: '92%', unit: 'Tersedia', icon: '📦', color: '#8b5cf6' }
+const DashboardPimpinan = ({ setCurrentPage }) => {
+    const [loading, setLoading] = useState(true)
+    const [dashboardData, setDashboardData] = useState({
+        faslan: {
+            totalTanah: 0,
+            totalKapling: 0,
+            totalBangunan: 0,
+            totalPemanfaatan: 0,
+            totalKompensasi: 0
+        },
+        faslabuh: {
+            totalDermaga: 0,
+            kondisiBaik: 0,
+            perluPerbaikan: 0
+        },
+        fasharpan: {
+            totalPemeliharaan: 0,
+            selesai: 0,
+            berlangsung: 0
+        }
+    })
+
+    // Fetch data from APIs
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            try {
+                setLoading(true)
+
+                // Fetch Faslan Data
+                const [tanah, kapling, bangunan, pemanfaatan, faslabuh] = await Promise.all([
+                    fetch('http://localhost:3001/api/assets/tanah').then(r => r.json()),
+                    fetch('http://localhost:3001/api/assets/kapling').then(r => r.json()),
+                    fetch('http://localhost:3001/api/assets/bangunan').then(r => r.json()),
+                    fetch('http://localhost:3001/api/assets/pemanfaatan').then(r => r.json()),
+                    fetch('http://localhost:3001/api/faslabuh').then(r => r.json()).catch(() => [])
+                ])
+
+                // Calculate totals
+                const totalKompensasi = pemanfaatan.reduce((sum, item) => {
+                    const kompensasi = parseFloat(String(item.nilai_kompensasi).replace(/,/g, '')) || 0
+                    return sum + kompensasi
+                }, 0)
+
+                // Calculate Faslabuh kondisi
+                const kondisiBaik = faslabuh.filter(d => d.kondisi?.toLowerCase().includes('baik')).length
+                const perluPerbaikan = faslabuh.filter(d =>
+                    d.kondisi?.toLowerCase().includes('rusak') ||
+                    d.kondisi?.toLowerCase().includes('perbaikan')
+                ).length
+
+                setDashboardData({
+                    faslan: {
+                        totalTanah: tanah.length,
+                        totalKapling: kapling.length,
+                        totalBangunan: bangunan.length,
+                        totalPemanfaatan: pemanfaatan.length,
+                        totalKompensasi
+                    },
+                    faslabuh: {
+                        totalDermaga: faslabuh.length,
+                        kondisiBaik,
+                        perluPerbaikan
+                    },
+                    fasharpan: {
+                        totalPemeliharaan: 0,
+                        selesai: 0,
+                        berlangsung: 0
+                    }
+                })
+            } catch (error) {
+                console.error('Error fetching dashboard data:', error)
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        fetchDashboardData()
+    }, [])
+
+    // Format number with thousand separator
+    const formatNumber = (num) => {
+        return new Intl.NumberFormat('id-ID').format(num)
+    }
+
+    // Format currency
+    const formatCurrency = (num) => {
+        return `Rp ${new Intl.NumberFormat('id-ID').format(num)}`
+    }
+
+    // Calculate percentages
+    const kondisiBaikPercentage = dashboardData.faslabuh.totalDermaga > 0
+        ? Math.round((dashboardData.faslabuh.kondisiBaik / dashboardData.faslabuh.totalDermaga) * 100)
+        : 0
+
+    // Main stats for top cards
+    const mainStats = [
+        {
+            label: 'Total Aset Tanah',
+            value: formatNumber(dashboardData.faslan.totalTanah),
+            unit: 'Lokasi',
+            icon: '📍',
+            color: '#0ea5e9',
+            onClick: () => setCurrentPage('faslan-tanah')
+        },
+        {
+            label: 'Total Aset Bangunan',
+            value: formatNumber(dashboardData.faslan.totalBangunan),
+            unit: 'Bangunan',
+            icon: '🏢',
+            color: '#8b5cf6',
+            onClick: () => setCurrentPage('faslan-bangunan')
+        },
+        {
+            label: 'Pemanfaatan Aset',
+            value: formatNumber(dashboardData.faslan.totalPemanfaatan),
+            unit: 'Kerjasama Aktif',
+            icon: '🤝',
+            color: '#10b981',
+            onClick: () => setCurrentPage('faslan-kerjasama')
+        },
+        {
+            label: 'Kondisi Dermaga Baik',
+            value: `${kondisiBaikPercentage}%`,
+            unit: `${dashboardData.faslabuh.kondisiBaik} dari ${dashboardData.faslabuh.totalDermaga} Dermaga`,
+            icon: '⚓',
+            color: '#f59e0b',
+            onClick: () => setCurrentPage('faslan-faslabuh')
+        }
     ]
+
+    // Detailed breakdown cards
+    const detailCards = [
+        {
+            title: 'Fasilitas Pangkalan',
+            icon: '🏛️',
+            color: '#003366',
+            items: [
+                { label: 'Aset Tanah', value: dashboardData.faslan.totalTanah, page: 'faslan-tanah' },
+                { label: 'Aset Kapling', value: dashboardData.faslan.totalKapling, page: 'faslan-kapling' },
+                { label: 'Aset Bangunan', value: dashboardData.faslan.totalBangunan, page: 'faslan-bangunan' },
+                { label: 'Pemanfaatan Aset', value: dashboardData.faslan.totalPemanfaatan, page: 'faslan-kerjasama' }
+            ]
+        },
+        {
+            title: 'Faslabuh',
+            icon: '⚓',
+            color: '#0066cc',
+            items: [
+                { label: 'Total Dermaga', value: dashboardData.faslabuh.totalDermaga, page: 'faslan-faslabuh' },
+                { label: 'Kondisi Baik', value: dashboardData.faslabuh.kondisiBaik, page: 'faslan-faslabuh' },
+                { label: 'Perlu Perbaikan', value: dashboardData.faslabuh.perluPerbaikan, page: 'faslan-faslabuh', alert: dashboardData.faslabuh.perluPerbaikan > 0 }
+            ]
+        },
+        {
+            title: 'Nilai Kompensasi',
+            icon: '💰',
+            color: '#10b981',
+            highlight: true,
+            items: [
+                { label: 'Total Kompensasi', value: formatCurrency(dashboardData.faslan.totalKompensasi), page: 'faslan-kerjasama', large: true }
+            ]
+        }
+    ]
+
+    if (loading) {
+        return (
+            <div className="fade-in" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>⏳</div>
+                    <div style={{ color: '#64748b', fontFamily: 'var(--font-family)' }}>Memuat data dashboard...</div>
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className="fade-in">
             <div className="page-header">
                 <h1 className="page-title">Dashboard Pimpinan</h1>
-                <p className="page-subtitle">Ringkasan Eksekutif Data Logistik & Fasilitas Kodaeral</p>
+                <p className="page-subtitle">Ringkasan Eksekutif Data Logistik & Fasilitas Kodaeral 3 Jakarta</p>
             </div>
 
-            {/* Stats Grid */}
+            {/* Main Stats Grid */}
             <div className="stats-grid">
-                {stats.map((stat, idx) => (
-                    <div key={idx} className="stat-card">
+                {mainStats.map((stat, idx) => (
+                    <div
+                        key={idx}
+                        className="stat-card"
+                        onClick={stat.onClick}
+                        style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'translateY(-4px)'
+                            e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.15)'
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'translateY(0)'
+                            e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'
+                        }}
+                    >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                             <div>
                                 <div className="stat-label">{stat.label}</div>
                                 <div className="stat-value" style={{ color: stat.color }}>{stat.value}</div>
-                                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{stat.unit}</div>
+                                <div style={{ fontSize: '0.8rem', color: '#64748b', fontFamily: 'var(--font-family)' }}>{stat.unit}</div>
                             </div>
                             <div style={{
                                 fontSize: '1.5rem',
@@ -40,37 +220,145 @@ const DashboardPimpinan = () => {
                 ))}
             </div>
 
-            {/* Chart Area Placeholder */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginTop: '20px' }}>
-                <div className="card" style={{ minHeight: '400px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
-                    <div style={{ fontSize: '48px', marginBottom: '10px' }}>📊</div>
-                    <h3>Grafik Performa Aset</h3>
-                    <p>Visualisasi data tren pemeliharaan dan kondisi aset akan ditampilkan di sini.</p>
-                </div>
-
-                <div className="card" style={{ minHeight: '400px' }}>
-                    <h3 style={{ fontSize: '1.1rem', marginBottom: '15px', color: '#003366' }}>Pemberitahuan Penting</h3>
-                    <ul style={{ listStyle: 'none', padding: 0 }}>
-                        {[1, 2, 3].map(i => (
-                            <li key={i} style={{
-                                padding: '10px 0',
-                                borderBottom: '1px solid #f1f5f9',
-                                display: 'flex',
-                                gap: '10px',
-                                alignItems: 'center'
+            {/* Detailed Breakdown */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginTop: '24px' }}>
+                {detailCards.map((card, idx) => (
+                    <div key={idx} className="card" style={{
+                        background: card.highlight ? `linear-gradient(135deg, ${card.color}15 0%, ${card.color}05 100%)` : 'white',
+                        border: card.highlight ? `2px solid ${card.color}30` : '1px solid #e5e7eb'
+                    }}>
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            marginBottom: '16px',
+                            paddingBottom: '12px',
+                            borderBottom: `2px solid ${card.color}20`
+                        }}>
+                            <div style={{
+                                fontSize: '1.5rem',
+                                background: `${card.color}20`,
+                                padding: '8px',
+                                borderRadius: '8px',
+                                color: card.color
                             }}>
-                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444' }}></span>
-                                <div>
-                                    <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>Laporan Bulanan Faslabuh</div>
-                                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Perlu persetujuan - 2 Jam lalu</div>
+                                {card.icon}
+                            </div>
+                            <h3 style={{
+                                fontSize: '1.1rem',
+                                margin: 0,
+                                color: card.color,
+                                fontWeight: '700',
+                                fontFamily: 'var(--font-family)'
+                            }}>
+                                {card.title}
+                            </h3>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            {card.items.map((item, itemIdx) => (
+                                <div
+                                    key={itemIdx}
+                                    onClick={() => item.route && navigate(item.route)}
+                                    style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        padding: '10px 12px',
+                                        background: item.alert ? '#fef2f2' : '#f9fafb',
+                                        borderRadius: '6px',
+                                        cursor: item.page ? 'pointer' : 'default',
+                                        transition: 'all 0.2s',
+                                        border: item.alert ? '1px solid #fecaca' : '1px solid transparent',
+                                        fontFamily: 'var(--font-family)'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (item.page) {
+                                            e.currentTarget.style.background = item.alert ? '#fee2e2' : '#f1f5f9'
+                                            e.currentTarget.style.transform = 'translateX(4px)'
+                                        }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (item.page) {
+                                            e.currentTarget.style.background = item.alert ? '#fef2f2' : '#f9fafb'
+                                            e.currentTarget.style.transform = 'translateX(0)'
+                                        }
+                                    }}
+                                >
+                                    <span style={{
+                                        fontSize: item.large ? '0.95rem' : '0.9rem',
+                                        color: item.alert ? '#dc2626' : '#374151',
+                                        fontWeight: item.large ? '600' : '500'
+                                    }}>
+                                        {item.alert && '⚠️ '}
+                                        {item.label}
+                                    </span>
+                                    <span style={{
+                                        fontSize: item.large ? '1.1rem' : '1rem',
+                                        fontWeight: '700',
+                                        color: item.alert ? '#dc2626' : card.color
+                                    }}>
+                                        {typeof item.value === 'number' ? formatNumber(item.value) : item.value}
+                                    </span>
                                 </div>
-                            </li>
-                        ))}
-                    </ul>
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Quick Actions */}
+            <div className="card" style={{ marginTop: '24px' }}>
+                <h3 style={{ fontSize: '1.1rem', marginBottom: '16px', color: '#003366', fontFamily: 'var(--font-family)' }}>
+                    🚀 Akses Cepat
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                    {[
+                        { label: 'Peta Faslan', icon: '🗺️', page: 'faslan-peta', color: '#0ea5e9' },
+                        { label: 'Aset Tanah', icon: '⛰️', page: 'faslan-tanah', color: '#10b981' },
+                        { label: 'Aset Bangunan', icon: '🏢', page: 'faslan-bangunan', color: '#8b5cf6' },
+                        { label: 'Pemanfaatan Aset', icon: '🤝', page: 'faslan-kerjasama', color: '#f59e0b' },
+                        { label: 'Faslabuh', icon: '⚓', page: 'faslan-faslabuh', color: '#0066cc' },
+                        { label: 'Master Data', icon: '⚙️', page: 'master-asset', color: '#64748b' }
+                    ].map((action, idx) => (
+                        <button
+                            key={idx}
+                            onClick={() => setCurrentPage(action.page)}
+                            style={{
+                                padding: '12px 16px',
+                                background: `${action.color}10`,
+                                border: `1px solid ${action.color}30`,
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                fontSize: '0.9rem',
+                                fontWeight: '600',
+                                color: action.color,
+                                fontFamily: 'var(--font-family)'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = `${action.color}20`
+                                e.currentTarget.style.transform = 'scale(1.02)'
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = `${action.color}10`
+                                e.currentTarget.style.transform = 'scale(1)'
+                            }}
+                        >
+                            <span style={{ fontSize: '1.2rem' }}>{action.icon}</span>
+                            {action.label}
+                        </button>
+                    ))}
                 </div>
             </div>
         </div>
     )
+}
+
+DashboardPimpinan.propTypes = {
+    setCurrentPage: PropTypes.func.isRequired
 }
 
 export default DashboardPimpinan
