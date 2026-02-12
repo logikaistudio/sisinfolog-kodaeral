@@ -161,14 +161,24 @@ function Faslabuh() {
                     return undefined
                 }
 
+                // State for merged cells (fill down)
+                let lastLantamal = ''
+                let lastFaslan = ''
+
                 // Map Excel to database fields
                 const mappedData = jsonData.map((row, i) => {
                     if (i === 0) console.log('First row sample:', row)
 
-                    return {
+                    // Handle merged cells (fill down)
+                    const rawLantamal = getValue(row, ['LOKASI', 'Lantamal'])
+                    if (rawLantamal) lastLantamal = rawLantamal
 
-                        lantamal: getValue(row, ['LOKASI', 'Lantamal']) || '', // Prioritaskan "LOKASI"
-                        lanal_faslan: getValue(row, ['WILAYAH', 'Lanal', 'Faslan', 'Satker']) || '', // Prioritaskan "WILAYAH"
+                    const rawFaslan = getValue(row, ['WILAYAH', 'Lanal', 'Faslan', 'Satker'])
+                    if (rawFaslan) lastFaslan = rawFaslan
+
+                    return {
+                        lantamal: lastLantamal || '',
+                        lanal_faslan: lastFaslan || '',
                         lokasi_dermaga: getValue(row, ['Alamat', 'Lokasi Dermaga']) || '',
                         nama_dermaga: getValue(row, ['NAMA DERMAGA', 'Nama Dermaga', 'Nama']) || 'Tanpa Nama',
                         jenis_dermaga: getValue(row, ['Jenis Dermaga', 'Jenis']) || '',
