@@ -97,12 +97,92 @@ app.post('/api/harpan', async (req, res) => {
         console.error(err);
         res.status(500).json({ error: 'Internal server error' });
     }
-});
-
-if (process.env.NODE_ENV !== 'production') {
-    app.listen(port, () => {
-        console.log(`Server running on port ${port}`);
+    // --- PEMANFAATAN ASET API ---
+    // Get All Pemanfaatan Assets
+    app.get('/api/assets/pemanfaatan', async (req, res) => {
+        try {
+            const result = await pool.query('SELECT * FROM assets_pemanfaatan ORDER BY id ASC');
+            res.json(result.rows);
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ error: 'Internal server error' });
+        }
     });
-}
 
-module.exports = app;
+    // Add Pemanfaatan Asset
+    app.post('/api/assets/pemanfaatan', async (req, res) => {
+        const { objek_pemanfaatan, luas, bentuk_pemanfaatan, pihak_pks, no_pks, tgl_pks, nilai_kompensasi, jangka_waktu, no_persetujuan, tgl_persetujuan, no_ntpn, tgl_ntpn } = req.body;
+        try {
+            const result = await pool.query(
+                `INSERT INTO assets_pemanfaatan (objek_pemanfaatan, luas, bentuk_pemanfaatan, pihak_pks, no_pks, tgl_pks, nilai_kompensasi, jangka_waktu, no_persetujuan, tgl_persetujuan, no_ntpn, tgl_ntpn)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+                [objek_pemanfaatan, luas, bentuk_pemanfaatan, pihak_pks, no_pks, tgl_pks, nilai_kompensasi, jangka_waktu, no_persetujuan, tgl_persetujuan, no_ntpn, tgl_ntpn]
+            );
+            res.json(result.rows[0]);
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    });
+
+    // Bulk Add Pemanfaatan Asset
+    app.post('/api/assets/pemanfaatan/bulk', async (req, res) => {
+        const items = req.body;
+        if (!Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ error: 'Invalid input' });
+        }
+
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            const insertedItems = [];
+            for (const item of items) {
+                const { objek_pemanfaatan, luas, bentuk_pemanfaatan, pihak_pks, no_pks, tgl_pks, nilai_kompensasi, jangka_waktu, no_persetujuan, tgl_persetujuan, no_ntpn, tgl_ntpn } = item;
+                const res = await client.query(
+                    `INSERT INTO assets_pemanfaatan (objek_pemanfaatan, luas, bentuk_pemanfaatan, pihak_pks, no_pks, tgl_pks, nilai_kompensasi, jangka_waktu, no_persetujuan, tgl_persetujuan, no_ntpn, tgl_ntpn)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+                    [objek_pemanfaatan, luas, bentuk_pemanfaatan, pihak_pks, no_pks, tgl_pks, nilai_kompensasi, jangka_waktu, no_persetujuan, tgl_persetujuan, no_ntpn, tgl_ntpn]
+                );
+                insertedItems.push(res.rows[0]);
+            }
+            await client.query('COMMIT');
+            res.json(insertedItems);
+        } catch (err) {
+            await client.query('ROLLBACK');
+            console.error(err);
+            res.status(500).json({ error: 'Internal server error' });
+        } finally {
+            client.release();
+        }
+    });
+
+    // Delete Single Pemanfaatan Asset
+    app.delete('/api/assets/pemanfaatan/:id', async (req, res) => {
+        const { id } = req.params;
+        try {
+            await pool.query('DELETE FROM assets_pemanfaatan WHERE id = $1', [id]);
+            res.json({ message: 'Deleted successfully' });
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    });
+
+    // Delete All Pemanfaatan Assets
+    app.delete('/api/assets/pemanfaatan', async (req, res) => {
+        try {
+            await pool.query('DELETE FROM assets_pemanfaatan');
+            res.json({ message: 'All data deleted successfully' });
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    });
+
+    if (process.env.NODE_ENV !== 'production') {
+        app.listen(port, () => {
+            console.log(`Server running on port ${port}`);
+        });
+    }
+
+    module.exports = app;

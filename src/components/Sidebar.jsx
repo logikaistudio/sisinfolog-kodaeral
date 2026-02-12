@@ -27,7 +27,7 @@ function Sidebar({ currentPage, setCurrentPage, collapsed, setCollapsed, mobileO
                         { id: 'faslan-tanah', label: 'Aset Tanah', icon: '⛰️' },
                         { id: 'faslan-kapling', label: 'Aset Kapling', icon: '🏕️' },
                         { id: 'faslan-bangunan', label: 'Aset Bangunan', icon: '🏢' },
-                        { id: 'faslan-kerjasama', label: 'Kerjasama', icon: '🤝' }
+                        { id: 'faslan-kerjasama', label: 'Pemanfaatan Aset', icon: '🤝' }
                     ]
                 },
                 { id: 'faslan-faslabuh', label: 'Faslabuh', icon: '⚓' }

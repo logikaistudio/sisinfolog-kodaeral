@@ -271,11 +271,146 @@ app.delete('/api/assets/kapling/:id', async (req, res) => {
 });
 
 // Delete All Kapling Assets
+// Delete All Kapling Assets
 app.delete('/api/assets/kapling', async (req, res) => {
     try {
         await pool.query('DELETE FROM assets_kapling');
         res.json({ message: 'All kapling assets deleted successfully' });
-    } catch (err) { console.error(err); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (err) {
+        console.error(err); res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// --- PEMANFAATAN ASET API ---
+// Get All Pemanfaatan Assets
+app.get('/api/assets/pemanfaatan', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM assets_pemanfaatan ORDER BY id ASC');
+        res.json(result.rows);
+    } catch (err) {
+        // Auto-create table if missing
+        if (err.code === '42P01') {
+            try {
+                await pool.query(`
+                    CREATE TABLE IF NOT EXISTS assets_pemanfaatan (
+                        id SERIAL PRIMARY KEY,
+                        objek TEXT,
+                        pemanfaatan TEXT,
+                        luas TEXT,
+                        bentuk_pemanfaatan TEXT,
+                        pihak_pks TEXT,
+                        no_pks TEXT,
+                        tgl_pks TEXT,
+                        nilai_kompensasi TEXT,
+                        jangka_waktu TEXT,
+                        no_persetujuan TEXT,
+                        tgl_persetujuan TEXT,
+                        no_ntpn TEXT,
+                        tgl_ntpn TEXT,
+                        created_at TIMESTAMP DEFAULT NOW()
+                    );
+                `);
+                res.json([]);
+            } catch (e) { console.error(e); res.status(500).json({ error: 'DB Error' }); }
+        } else {
+            console.error(err);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    }
+});
+
+// Add Pemanfaatan Asset
+app.post('/api/assets/pemanfaatan', async (req, res) => {
+    const { objek, pemanfaatan, luas, bentuk_pemanfaatan, pihak_pks, no_pks, tgl_pks, nilai_kompensasi, jangka_waktu, no_persetujuan, tgl_persetujuan, no_ntpn, tgl_ntpn } = req.body;
+    try {
+        const result = await pool.query(
+            `INSERT INTO assets_pemanfaatan (objek, pemanfaatan, luas, bentuk_pemanfaatan, pihak_pks, no_pks, tgl_pks, nilai_kompensasi, jangka_waktu, no_persetujuan, tgl_persetujuan, no_ntpn, tgl_ntpn)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
+            [objek, pemanfaatan, luas, bentuk_pemanfaatan, pihak_pks, no_pks, tgl_pks, nilai_kompensasi, jangka_waktu, no_persetujuan, tgl_persetujuan, no_ntpn, tgl_ntpn]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Bulk Add Pemanfaatan Asset
+app.post('/api/assets/pemanfaatan/bulk', async (req, res) => {
+    const items = req.body;
+    if (!Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ error: 'Invalid input' });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const insertedItems = [];
+        for (const item of items) {
+            const { objek, pemanfaatan, luas, bentuk_pemanfaatan, pihak_pks, no_pks, tgl_pks, nilai_kompensasi, jangka_waktu, no_persetujuan, tgl_persetujuan, no_ntpn, tgl_ntpn } = item;
+            const res = await client.query(
+                `INSERT INTO assets_pemanfaatan (objek, pemanfaatan, luas, bentuk_pemanfaatan, pihak_pks, no_pks, tgl_pks, nilai_kompensasi, jangka_waktu, no_persetujuan, tgl_persetujuan, no_ntpn, tgl_ntpn)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
+                [objek, pemanfaatan, luas, bentuk_pemanfaatan, pihak_pks, no_pks, tgl_pks, nilai_kompensasi, jangka_waktu, no_persetujuan, tgl_persetujuan, no_ntpn, tgl_ntpn]
+            );
+            insertedItems.push(res.rows[0]);
+        }
+        await client.query('COMMIT');
+        res.json(insertedItems);
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    } finally {
+        client.release();
+    }
+});
+
+// Update Pemanfaatan Asset
+app.put('/api/assets/pemanfaatan/:id', async (req, res) => {
+    const { id } = req.params;
+    const { objek, pemanfaatan, luas, bentuk_pemanfaatan, pihak_pks, no_pks, tgl_pks, nilai_kompensasi, jangka_waktu, no_persetujuan, tgl_persetujuan, no_ntpn, tgl_ntpn, longitude, latitude } = req.body;
+    try {
+        const result = await pool.query(
+            `UPDATE assets_pemanfaatan 
+             SET objek = $1, pemanfaatan = $2, luas = $3, bentuk_pemanfaatan = $4, pihak_pks = $5, 
+                 no_pks = $6, tgl_pks = $7, nilai_kompensasi = $8, jangka_waktu = $9, 
+                 no_persetujuan = $10, tgl_persetujuan = $11, no_ntpn = $12, tgl_ntpn = $13,
+                 longitude = $14, latitude = $15
+             WHERE id = $16 RETURNING *`,
+            [objek, pemanfaatan, luas, bentuk_pemanfaatan, pihak_pks, no_pks, tgl_pks, nilai_kompensasi, jangka_waktu, no_persetujuan, tgl_persetujuan, no_ntpn, tgl_ntpn, longitude, latitude, id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Item not found' });
+        }
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Delete Single Pemanfaatan Asset
+app.delete('/api/assets/pemanfaatan/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        await pool.query('DELETE FROM assets_pemanfaatan WHERE id = $1', [id]);
+        res.json({ message: 'Deleted successfully' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Delete All Pemanfaatan Assets
+app.delete('/api/assets/pemanfaatan', async (req, res) => {
+    try {
+        await pool.query('DELETE FROM assets_pemanfaatan');
+        res.json({ message: 'All data deleted successfully' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
 // Get Single Tanah Asset by Code

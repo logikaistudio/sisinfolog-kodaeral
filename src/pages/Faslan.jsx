@@ -551,189 +551,398 @@ function Faslan({ type }) {
                     </div>
                 </div>
 
-                {/* Grouped Tables by Area */}
-                {(() => {
-                    // Group data by area
-                    const groupedData = dataArray.reduce((acc, asset) => {
-                        const area = asset.area || 'Tidak Ditentukan';
-                        if (!acc[area]) {
-                            acc[area] = [];
-                        }
-                        acc[area].push(asset);
-                        return acc;
-                    }, {});
+                {/* Content: Grouped Table View for Kapling */}
+                {type === 'kapling' ? (
+                    (() => {
+                        // Group data by area
+                        const groupedData = dataArray.reduce((acc, asset) => {
+                            const area = asset.area || 'Tidak Ditentukan';
+                            if (!acc[area]) {
+                                acc[area] = [];
+                            }
+                            acc[area].push(asset);
+                            return acc;
+                        }, {});
 
-                    // Sort areas alphabetically
-                    const sortedAreas = Object.keys(groupedData).sort();
+                        // Sort areas alphabetically
+                        const sortedAreas = Object.keys(groupedData).sort();
 
-                    return sortedAreas.map((area, areaIndex) => (
-                        <div key={area} style={{ marginBottom: '32px' }}>
-                            {/* Area Header */}
-                            <div style={{
-                                background: 'linear-gradient(135deg, #011F5B 0%, #023E8A 100%)',
-                                padding: '18px 28px',
-                                borderRadius: '16px 16px 0 0',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                boxShadow: '0 4px 16px rgba(1, 31, 91, 0.25)',
-                                position: 'relative',
-                                overflow: 'hidden'
-                            }}>
-                                {/* Decorative gradient overlay */}
-                                <div style={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    right: 0,
-                                    width: '300px',
-                                    height: '100%',
-                                    background: 'radial-gradient(circle at top right, rgba(255,255,255,0.1) 0%, transparent 70%)',
-                                    pointerEvents: 'none'
-                                }}></div>
+                        return sortedAreas.map((area, areaIndex) => {
+                            const assetsInArea = groupedData[area];
 
-                                <div style={{ position: 'relative', zIndex: 1 }}>
-                                    <h3 style={{ color: 'white', fontSize: '17px', fontWeight: '700', margin: 0, marginBottom: '6px', letterSpacing: '0.3px' }}>
-                                        📍 {area}
-                                    </h3>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '13px', margin: 0, fontWeight: '500' }}>
-                                            {groupedData[area].length} aset terdaftar
-                                        </p>
-                                        <div style={{ width: '1px', height: '14px', background: 'rgba(255,255,255,0.3)' }}></div>
-                                        <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '13px', margin: 0, fontWeight: '500' }}>
-                                            {groupedData[area].filter(i => i.status === 'Aktif' || i.status === 'Terisi').length} Terisi
-                                        </p>
-                                    </div>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', position: 'relative', zIndex: 1 }}>
+                            // Calculate summaries for this area
+                            const totalOccupants = assetsInArea.filter(a => a.occupant_name && a.occupant_name !== '-').length;
+                            const totalLuasArea = assetsInArea.reduce((sum, item) => {
+                                if (item.luas_tanah_seluruhnya && parseFloat(item.luas_tanah_seluruhnya) > 0) {
+                                    return sum + parseFloat(item.luas_tanah_seluruhnya);
+                                }
+                                let luasStr = String(item.luas || '0').replace(/m2|m²|\s/gi, '');
+                                luasStr = luasStr.replace(/\./g, '').replace(',', '.');
+                                const luasNum = parseFloat(luasStr) || 0;
+                                return sum + luasNum;
+                            }, 0);
+
+                            return (
+                                <div key={area} style={{ marginBottom: '32px' }}>
+                                    {/* Area Header */}
                                     <div style={{
-                                        background: 'rgba(255,255,255,0.15)',
-                                        backdropFilter: 'blur(10px)',
-                                        padding: '8px 16px',
-                                        borderRadius: '24px',
-                                        border: '1px solid rgba(255,255,255,0.25)',
-                                        color: 'white',
-                                        fontSize: '14px',
-                                        fontWeight: '700',
-                                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                                        background: 'linear-gradient(135deg, #011F5B 0%, #023E8A 100%)',
+                                        padding: '18px 28px',
+                                        borderRadius: '16px 16px 0 0',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        boxShadow: '0 4px 16px rgba(1, 31, 91, 0.25)',
+                                        position: 'relative',
+                                        overflow: 'hidden'
                                     }}>
-                                        {groupedData[area].reduce((sum, a) => {
-                                            let luasVal = 0;
-                                            if (a.luas_tanah_seluruhnya && parseFloat(a.luas_tanah_seluruhnya) > 0) {
-                                                luasVal = parseFloat(a.luas_tanah_seluruhnya);
-                                            } else {
-                                                let s = String(a.luas || '0').replace(/m2|m²|\s/gi, '');
-                                                s = s.replace(/\./g, '').replace(',', '.');
-                                                luasVal = parseFloat(s) || 0;
-                                            }
-                                            return sum + luasVal;
-                                        }, 0).toLocaleString('id-ID', { maximumFractionDigits: 0 })} m²
+                                        {/* Decorative gradient overlay */}
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            right: 0,
+                                            width: '300px',
+                                            height: '100%',
+                                            background: 'radial-gradient(circle at top right, rgba(255,255,255,0.1) 0%, transparent 70%)',
+                                            pointerEvents: 'none'
+                                        }}></div>
+
+                                        <div style={{ position: 'relative', zIndex: 1 }}>
+                                            <h3 style={{ color: 'white', fontSize: '17px', fontWeight: '700', margin: 0, marginBottom: '6px', letterSpacing: '0.3px' }}>
+                                                📍 {area}
+                                            </h3>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.1)', padding: '4px 10px', borderRadius: '8px' }}>
+                                                    <span style={{ fontSize: '14px' }}>🏠</span>
+                                                    <span style={{ color: 'white', fontSize: '13px', fontWeight: '600' }}>
+                                                        {assetsInArea.length} Unit
+                                                    </span>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(16, 185, 129, 0.2)', padding: '4px 10px', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                                                    <span style={{ fontSize: '14px' }}>👤</span>
+                                                    <span style={{ color: '#d1fae5', fontSize: '13px', fontWeight: '600' }}>
+                                                        {totalOccupants} Penghuni
+                                                    </span>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(245, 158, 11, 0.2)', padding: '4px 10px', borderRadius: '8px', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                                                    <span style={{ fontSize: '14px' }}>📐</span>
+                                                    <span style={{ color: '#fde68a', fontSize: '13px', fontWeight: '600' }}>
+                                                        Tot. Luas: {totalLuasArea.toLocaleString('id-ID', { maximumFractionDigits: 0 })} m²
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div style={{ position: 'relative', zIndex: 1 }}>
+                                            <button
+                                                onClick={() => {
+                                                    const el = document.getElementById(`table-kapling-${areaIndex}`);
+                                                    const icon = document.getElementById(`icon-kapling-${areaIndex}`);
+                                                    if (el) {
+                                                        if (el.style.display === 'none') {
+                                                            el.style.display = 'block';
+                                                            if (icon) icon.style.transform = 'rotate(180deg)';
+                                                        } else {
+                                                            el.style.display = 'none';
+                                                            if (icon) icon.style.transform = 'rotate(0deg)';
+                                                        }
+                                                    }
+                                                }}
+                                                style={{
+                                                    background: 'rgba(255,255,255,0.1)',
+                                                    border: '1px solid rgba(255,255,255,0.3)',
+                                                    width: '36px',
+                                                    height: '36px',
+                                                    borderRadius: '50%',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    cursor: 'pointer',
+                                                    color: 'white',
+                                                    transition: 'all 0.2s'
+                                                }}
+                                            >
+                                                <svg id={`icon-kapling-${areaIndex}`} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transition: 'transform 0.3s', transform: 'rotate(180deg)' }}>
+                                                    <path d="M6 9l6 6 6-6" />
+                                                </svg>
+                                            </button>
+                                        </div>
                                     </div>
-                                    <button
-                                        onClick={() => {
-                                            const el = document.getElementById(`table-area-${areaIndex}`);
-                                            const icon = document.getElementById(`icon-area-${areaIndex}`);
-                                            if (el) {
-                                                if (el.style.display === 'none') {
-                                                    el.style.display = 'block';
-                                                    if (icon) icon.style.transform = 'rotate(180deg)';
-                                                } else {
-                                                    el.style.display = 'none';
-                                                    if (icon) icon.style.transform = 'rotate(0deg)';
-                                                }
-                                            }
-                                        }}
-                                        style={{
-                                            background: 'rgba(255,255,255,0.1)',
-                                            border: '1px solid rgba(255,255,255,0.3)',
-                                            width: '32px',
-                                            height: '32px',
-                                            borderRadius: '50%',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            cursor: 'pointer',
-                                            color: 'white',
-                                            transition: 'all 0.2s'
-                                        }}
-                                    >
-                                        <svg id={`icon-area-${areaIndex}`} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transition: 'transform 0.3s', transform: 'rotate(180deg)' }}>
-                                            <path d="M6 9l6 6 6-6" />
-                                        </svg>
-                                    </button>
+
+                                    {/* Table for this area */}
+                                    <div id={`table-kapling-${areaIndex}`} className="card" style={{ marginTop: 0, borderRadius: '0 0 12px 12px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', overflow: 'hidden', border: '1px solid #e2e8f0', display: 'block' }}>
+                                        <div style={{ overflowX: 'auto' }}>
+                                            <table className="table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0' }}>
+                                                <thead>
+                                                    <tr style={{ background: '#f8fafc', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                                        <th style={{ padding: '14px 20px', textAlign: 'left', fontWeight: '600', color: '#64748b', borderBottom: '1px solid #e2e8f0' }}>Identitas Aset</th>
+                                                        <th style={{ padding: '14px 20px', textAlign: 'left', fontWeight: '600', color: '#64748b', borderBottom: '1px solid #e2e8f0' }}>Penghuni</th>
+                                                        <th style={{ padding: '14px 20px', textAlign: 'left', fontWeight: '600', color: '#64748b', borderBottom: '1px solid #e2e8f0' }}>Lokasi</th>
+                                                        <th style={{ padding: '14px 20px', textAlign: 'center', fontWeight: '600', color: '#64748b', borderBottom: '1px solid #e2e8f0' }}>Status</th>
+                                                        <th style={{ padding: '14px 20px', textAlign: 'right', fontWeight: '600', color: '#64748b', borderBottom: '1px solid #e2e8f0' }}>Luas (m²)</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {assetsInArea.length === 0 ? (
+                                                        <tr>
+                                                            <td colSpan="5" style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>
+                                                                Tidak ada data pada kelompok ini.
+                                                            </td>
+                                                        </tr>
+                                                    ) : (
+                                                        assetsInArea.map((asset, idx) => {
+                                                            // Format luas
+                                                            let displayLuas = '-';
+                                                            if (asset.luas_tanah_seluruhnya && parseFloat(asset.luas_tanah_seluruhnya) > 0) {
+                                                                displayLuas = parseFloat(asset.luas_tanah_seluruhnya).toLocaleString('id-ID', { maximumFractionDigits: 0 });
+                                                            } else if (asset.luas && asset.luas !== '-') {
+                                                                let s = String(asset.luas).replace(/m2|m²|\s/gi, '');
+                                                                s = s.replace(/\./g, '').replace(',', '.');
+                                                                const val = parseFloat(s) || 0;
+                                                                displayLuas = val.toLocaleString('id-ID', { maximumFractionDigits: 0 });
+                                                            }
+
+                                                            return (
+                                                                <tr
+                                                                    key={asset.id || idx}
+                                                                    onClick={(e) => openModal(e, asset)}
+                                                                    style={{ cursor: 'pointer', transition: 'all 0.1s' }}
+                                                                    className="hover:bg-slate-50"
+                                                                >
+                                                                    <td style={{ padding: '14px 20px', borderBottom: '1px solid #f1f5f9' }}>
+                                                                        <div style={{ fontWeight: '600', color: '#1e293b', fontSize: '13px' }}>{asset.name || '-'}</div>
+                                                                        <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>{asset.code || asset.kode_asset || '-'}</div>
+                                                                    </td>
+                                                                    <td style={{ padding: '14px 20px', borderBottom: '1px solid #f1f5f9' }}>
+                                                                        <div style={{ fontWeight: '600', color: '#0369a1', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                            {asset.occupant_name ? `👤 ${asset.occupant_name}` : '-'}
+                                                                        </div>
+                                                                        {(asset.occupant_rank || asset.occupant_nrp) && (
+                                                                            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px', marginLeft: '22px' }}>
+                                                                                {asset.occupant_rank || '-'} / {asset.occupant_nrp || '-'}
+                                                                            </div>
+                                                                        )}
+                                                                    </td>
+                                                                    <td style={{ padding: '14px 20px', borderBottom: '1px solid #f1f5f9' }}>
+                                                                        <div style={{ fontSize: '12px', color: '#334155', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                                            {asset.location || '-'}
+                                                                        </div>
+                                                                    </td>
+                                                                    <td style={{ padding: '14px 20px', borderBottom: '1px solid #f1f5f9', textAlign: 'center' }}>
+                                                                        <span style={{
+                                                                            display: 'inline-block',
+                                                                            padding: '2px 10px',
+                                                                            borderRadius: '20px',
+                                                                            background: asset.status === 'Aktif' || asset.status === 'Terisi' ? '#dcfce7' : '#fef3c7',
+                                                                            color: asset.status === 'Aktif' || asset.status === 'Terisi' ? '#166534' : '#b45309',
+                                                                            fontSize: '10px',
+                                                                            fontWeight: '700'
+                                                                        }}>
+                                                                            {asset.status || '-'}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td style={{ padding: '14px 20px', borderBottom: '1px solid #f1f5f9', textAlign: 'right' }}>
+                                                                        <div style={{ fontWeight: '600', color: '#1e293b', fontSize: '13px', fontFamily: 'monospace' }}>
+                                                                            {displayLuas}
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            )
+                                                        })
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
+                            );
+                        });
+                    })()
+                ) : (
+                    // Grouped Tables by Area (Existing Logic for Tanah/Bangunan)
+                    (() => {
+                        // Group data by area
+                        const groupedData = dataArray.reduce((acc, asset) => {
+                            const area = asset.area || 'Tidak Ditentukan';
+                            if (!acc[area]) {
+                                acc[area] = [];
+                            }
+                            acc[area].push(asset);
+                            return acc;
+                        }, {});
 
-                            {/* Table for this area */}
-                            <div id={`table-area-${areaIndex}`} className="card" style={{ marginTop: 0, borderRadius: '0 0 12px 12px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', display: 'block' }}>
-                                <div className="table-container">
-                                    <table className="table table-compact" style={{ fontSize: '0.85rem' }}>
-                                        <thead>
-                                            <tr style={{ fontSize: '0.85rem', background: '#f8fafc' }}>
-                                                <th style={{ width: '30%' }}>Nama Bangunan</th>
-                                                <th style={{ width: '50%' }}>Alamat</th>
-                                                <th style={{ width: '20%', textAlign: 'right' }}>Luas</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {groupedData[area].map((asset) => {
-                                                // Format luas untuk tampilan - Prioritaskan luas_tanah_seluruhnya
-                                                let displayLuas = '-';
+                        // Sort areas alphabetically
+                        const sortedAreas = Object.keys(groupedData).sort();
+
+                        return sortedAreas.map((area, areaIndex) => (
+                            <div key={area} style={{ marginBottom: '32px' }}>
+                                {/* Area Header */}
+                                <div style={{
+                                    background: 'linear-gradient(135deg, #011F5B 0%, #023E8A 100%)',
+                                    padding: '18px 28px',
+                                    borderRadius: '16px 16px 0 0',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    boxShadow: '0 4px 16px rgba(1, 31, 91, 0.25)',
+                                    position: 'relative',
+                                    overflow: 'hidden'
+                                }}>
+                                    {/* Decorative gradient overlay */}
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        right: 0,
+                                        width: '300px',
+                                        height: '100%',
+                                        background: 'radial-gradient(circle at top right, rgba(255,255,255,0.1) 0%, transparent 70%)',
+                                        pointerEvents: 'none'
+                                    }}></div>
+
+                                    <div style={{ position: 'relative', zIndex: 1 }}>
+                                        <h3 style={{ color: 'white', fontSize: '17px', fontWeight: '700', margin: 0, marginBottom: '6px', letterSpacing: '0.3px' }}>
+                                            📍 {area}
+                                        </h3>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '13px', margin: 0, fontWeight: '500' }}>
+                                                {groupedData[area].length} aset terdaftar
+                                            </p>
+                                            <div style={{ width: '1px', height: '14px', background: 'rgba(255,255,255,0.3)' }}></div>
+                                            <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '13px', margin: 0, fontWeight: '500' }}>
+                                                {groupedData[area].filter(i => i.status === 'Aktif' || i.status === 'Terisi').length} Terisi
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', position: 'relative', zIndex: 1 }}>
+                                        <div style={{
+                                            background: 'rgba(255,255,255,0.15)',
+                                            backdropFilter: 'blur(10px)',
+                                            padding: '8px 16px',
+                                            borderRadius: '24px',
+                                            border: '1px solid rgba(255,255,255,0.25)',
+                                            color: 'white',
+                                            fontSize: '14px',
+                                            fontWeight: '700',
+                                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                                        }}>
+                                            {groupedData[area].reduce((sum, a) => {
                                                 let luasVal = 0;
-
-                                                if (asset.luas_tanah_seluruhnya && parseFloat(asset.luas_tanah_seluruhnya) > 0) {
-                                                    luasVal = parseFloat(asset.luas_tanah_seluruhnya);
-                                                    displayLuas = luasVal.toLocaleString('id-ID', { maximumFractionDigits: 0 });
-                                                } else if (asset.luas && asset.luas !== '-') {
-                                                    // Fix parsing: 1.379 -> 1379
-                                                    let s = String(asset.luas).replace(/m2|m²|\s/gi, '');
+                                                if (a.luas_tanah_seluruhnya && parseFloat(a.luas_tanah_seluruhnya) > 0) {
+                                                    luasVal = parseFloat(a.luas_tanah_seluruhnya);
+                                                } else {
+                                                    let s = String(a.luas || '0').replace(/m2|m²|\s/gi, '');
                                                     s = s.replace(/\./g, '').replace(',', '.');
                                                     luasVal = parseFloat(s) || 0;
-                                                    displayLuas = luasVal.toLocaleString('id-ID', { maximumFractionDigits: 0 });
                                                 }
+                                                return sum + luasVal;
+                                            }, 0).toLocaleString('id-ID', { maximumFractionDigits: 0 })} m²
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                const el = document.getElementById(`table-area-${areaIndex}`);
+                                                const icon = document.getElementById(`icon-area-${areaIndex}`);
+                                                if (el) {
+                                                    if (el.style.display === 'none') {
+                                                        el.style.display = 'block';
+                                                        if (icon) icon.style.transform = 'rotate(180deg)';
+                                                    } else {
+                                                        el.style.display = 'none';
+                                                        if (icon) icon.style.transform = 'rotate(0deg)';
+                                                    }
+                                                }
+                                            }}
+                                            style={{
+                                                background: 'rgba(255,255,255,0.1)',
+                                                border: '1px solid rgba(255,255,255,0.3)',
+                                                width: '32px',
+                                                height: '32px',
+                                                borderRadius: '50%',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                cursor: 'pointer',
+                                                color: 'white',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            <svg id={`icon-area-${areaIndex}`} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transition: 'transform 0.3s', transform: 'rotate(180deg)' }}>
+                                                <path d="M6 9l6 6 6-6" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
 
-                                                return (
-                                                    <tr key={asset.id} onClick={(e) => openModal(e, asset)} style={{ cursor: 'pointer', fontSize: '0.85rem' }} className="hover:bg-gray-50 transition-colors">
-                                                        <td style={{ verticalAlign: 'top', padding: '12px' }}>
-                                                            <div style={{ fontWeight: '500', color: '#1a1a1a', marginBottom: '4px' }}>
-                                                                {asset.name || '-'}
-                                                            </div>
-                                                            {asset.category && asset.category !== '-' && asset.category !== 'Tidak Ditentukan' && (
-                                                                <div style={{ fontSize: '0.75rem', color: '#666' }}>
-                                                                    {asset.category}
+                                {/* Table for this area */}
+                                <div id={`table-area-${areaIndex}`} className="card" style={{ marginTop: 0, borderRadius: '0 0 12px 12px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', display: 'block' }}>
+                                    <div className="table-container">
+                                        <table className="table table-compact" style={{ fontSize: '0.85rem' }}>
+                                            <thead>
+                                                <tr style={{ fontSize: '0.85rem', background: '#f8fafc' }}>
+                                                    <th style={{ width: '30%' }}>Nama Bangunan</th>
+                                                    <th style={{ width: '50%' }}>Alamat</th>
+                                                    <th style={{ width: '20%', textAlign: 'right' }}>Luas</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {groupedData[area].map((asset) => {
+                                                    // Format luas untuk tampilan - Prioritaskan luas_tanah_seluruhnya
+                                                    let displayLuas = '-';
+                                                    let luasVal = 0;
+
+                                                    if (asset.luas_tanah_seluruhnya && parseFloat(asset.luas_tanah_seluruhnya) > 0) {
+                                                        luasVal = parseFloat(asset.luas_tanah_seluruhnya);
+                                                        displayLuas = luasVal.toLocaleString('id-ID', { maximumFractionDigits: 0 });
+                                                    } else if (asset.luas && asset.luas !== '-') {
+                                                        // Fix parsing: 1.379 -> 1379
+                                                        let s = String(asset.luas).replace(/m2|m²|\s/gi, '');
+                                                        s = s.replace(/\./g, '').replace(',', '.');
+                                                        luasVal = parseFloat(s) || 0;
+                                                        displayLuas = luasVal.toLocaleString('id-ID', { maximumFractionDigits: 0 });
+                                                    }
+
+                                                    return (
+                                                        <tr key={asset.id} onClick={(e) => openModal(e, asset)} style={{ cursor: 'pointer', fontSize: '0.85rem' }} className="hover:bg-gray-50 transition-colors">
+                                                            <td style={{ verticalAlign: 'top', padding: '12px' }}>
+                                                                <div style={{ fontWeight: '500', color: '#1a1a1a', marginBottom: '4px' }}>
+                                                                    {asset.name || '-'}
                                                                 </div>
-                                                            )}
-                                                            {type === 'kapling' && asset.occupant_name && (
-                                                                <div style={{ fontSize: '0.8rem', color: '#0369a1', fontWeight: '600', marginTop: '2px' }}>
-                                                                    👤 {asset.occupant_name} {asset.occupant_rank ? `(${asset.occupant_rank})` : ''}
+                                                                {asset.category && asset.category !== '-' && asset.category !== 'Tidak Ditentukan' && (
+                                                                    <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                                                                        {asset.category}
+                                                                    </div>
+                                                                )}
+                                                                {type === 'kapling' && asset.occupant_name && (
+                                                                    <div style={{ fontSize: '0.8rem', color: '#0369a1', fontWeight: '600', marginTop: '2px' }}>
+                                                                        👤 {asset.occupant_name} {asset.occupant_rank ? `(${asset.occupant_rank})` : ''}
+                                                                    </div>
+                                                                )}
+                                                            </td>
+                                                            <td style={{ verticalAlign: 'top', padding: '12px' }}>
+                                                                <div style={{
+                                                                    overflow: 'hidden',
+                                                                    display: '-webkit-box',
+                                                                    WebkitLineClamp: 2,
+                                                                    WebkitBoxOrient: 'vertical',
+                                                                    lineHeight: '1.4',
+                                                                    color: '#444'
+                                                                }}>
+                                                                    {asset.location || '-'}
                                                                 </div>
-                                                            )}
-                                                        </td>
-                                                        <td style={{ verticalAlign: 'top', padding: '12px' }}>
-                                                            <div style={{
-                                                                overflow: 'hidden',
-                                                                display: '-webkit-box',
-                                                                WebkitLineClamp: 2,
-                                                                WebkitBoxOrient: 'vertical',
-                                                                lineHeight: '1.4',
-                                                                color: '#444'
-                                                            }}>
-                                                                {asset.location || '-'}
-                                                            </div>
-                                                        </td>
-                                                        <td style={{ verticalAlign: 'top', padding: '12px', textAlign: 'right', fontWeight: '500' }}>
-                                                            {displayLuas} <span style={{ fontSize: '0.75rem', color: '#888', fontWeight: 'normal' }}>m²</span>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
+                                                            </td>
+                                                            <td style={{ verticalAlign: 'top', padding: '12px', textAlign: 'right', fontWeight: '500' }}>
+                                                                {displayLuas} <span style={{ fontSize: '0.75rem', color: '#888', fontWeight: 'normal' }}>m²</span>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ));
-                })()}
+                        ));
+                    })()
+                )}
 
                 {/* Modal Detail/Edit - Ultra Modern 2026 */}
                 {isModalOpen && selectedAsset && (

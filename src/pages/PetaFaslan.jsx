@@ -222,7 +222,10 @@ function PetaFaslan() {
 
     const formatLuas = (luas) => {
         if (!luas || luas === '-') return '0'
-        const luasStr = String(luas).replace(/[^0-9.]/g, '')
+        // Handle format Indonesia: 1.234,56
+        let luasStr = String(luas).replace(/m2|m²|\s/gi, '')
+        // Remove thousands separator (.), replace decimal separator (,) with (.)
+        luasStr = luasStr.replace(/\./g, '').replace(',', '.')
         const luasNum = parseFloat(luasStr) || 0
         return luasNum.toLocaleString('id-ID', { maximumFractionDigits: 0 })
     }
@@ -385,7 +388,7 @@ function PetaFaslan() {
                                             <div>
                                                 <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: '600' }}>Luas</div>
                                                 <div style={{ fontSize: '16px', fontWeight: '700', color: '#0ea5e9' }}>
-                                                    {formatLuas(asset.luas)} m²
+                                                    {formatLuas(asset.luas_tanah_seluruhnya || asset.luas)} m²
                                                 </div>
                                             </div>
                                         </div>
@@ -428,7 +431,7 @@ function PetaFaslan() {
                                             <div>
                                                 <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: '600' }}>Luas</div>
                                                 <div style={{ fontSize: '16px', fontWeight: '700', color: '#f97316' }}>
-                                                    {formatLuas(asset.luas)} m²
+                                                    {formatLuas(asset.luas_tanah_seluruhnya || asset.luas)} m²
                                                 </div>
                                             </div>
                                         </div>
