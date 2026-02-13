@@ -1979,6 +1979,81 @@ app.delete('/api/assets/rumneg/all', async (req, res) => {
 
 // ==================== END RUMNEG ENDPOINTS ====================
 
+// ==================== DISKES (FASILITAS KESEHATAN) ENDPOINTS ====================
+
+// Get All DisKes Assets
+app.get('/api/assets/diskes', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM assets_diskes ORDER BY id ASC');
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get Single DisKes Asset
+app.get('/api/assets/diskes/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query('SELECT * FROM assets_diskes WHERE id = $1', [id]);
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Facility not found' });
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Create DisKes Asset
+app.post('/api/assets/diskes', async (req, res) => {
+    const { name, type, location, capacity, staff, status, description, longitude, latitude, tahun_beroperasi, sarana } = req.body;
+    try {
+        const result = await pool.query(
+            `INSERT INTO assets_diskes (name, type, location, capacity, staff, status, description, longitude, latitude, tahun_beroperasi, sarana)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+            [name, type, location, capacity, staff, status, description, longitude, latitude, tahun_beroperasi, JSON.stringify(sarana || [])]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Update DisKes Asset
+app.put('/api/assets/diskes/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, type, location, capacity, staff, status, description, longitude, latitude, tahun_beroperasi, sarana } = req.body;
+    try {
+        const result = await pool.query(
+            `UPDATE assets_diskes SET
+             name = $1, type = $2, location = $3, capacity = $4, staff = $5, status = $6, description = $7, 
+             longitude = $8, latitude = $9, tahun_beroperasi = $10, sarana = $11, updated_at = NOW()
+             WHERE id = $12 RETURNING *`,
+            [name, type, location, capacity, staff, status, description, longitude, latitude, tahun_beroperasi, JSON.stringify(sarana || []), id]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Facility not found' });
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Delete DisKes Asset
+app.delete('/api/assets/diskes/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query('DELETE FROM assets_diskes WHERE id = $1 RETURNING *', [id]);
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Facility not found' });
+        res.json({ message: 'Facility deleted successfully' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 if (process.env.NODE_ENV !== 'production') {
     app.listen(port, () => {
         console.log(`Server running on port ${port}`);
