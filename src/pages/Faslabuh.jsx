@@ -997,46 +997,15 @@ function Faslabuh() {
                                 fontSize: '0.75rem'
                             }}>
                                 <thead>
-                                    <tr style={{ background: '#ef4444', color: 'white' }}>
-                                        <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '600', fontSize: '0.7rem', width: '40px' }}>No</th>
-                                        <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem' }}>Lokasi</th>
-                                        <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem', width: '150px' }}>Alamat</th>
-                                        <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem' }}>Wilayah</th>
-                                        <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '600', fontSize: '0.7rem' }}>Lon/Lat</th>
-                                        <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem' }}>Nama Dermaga</th>
-                                        <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem' }}>Konstruksi</th>
-
-                                        {/* Dimensi */}
-                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>P (m)</th>
-                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>L (m)</th>
-                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>Luas (m²)</th>
-                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>Draft (m)</th>
-                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>Pasut (m)</th>
-                                        <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '600', fontSize: '0.7rem' }}>Kondisi</th>
-
-                                        {/* Kapabilitas */}
-                                        <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem' }}>Disp KRI</th>
-                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>Max Sandar (t)</th>
-                                        <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem' }}>Tipe Kapal</th>
-                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>Jml Max</th>
-                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>Plat (t)</th>
-                                        <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem' }}>Ranmor</th>
-
-                                        {/* Listrik */}
-                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>Titik Listrik</th>
-                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>Kap (A)</th>
-                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>Volt</th>
-                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>Hz</th>
-                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>Daya (kVA)</th>
-                                        <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem' }}>Sumber Listrik</th>
-
-                                        {/* Air & BBM */}
-                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>GWT (m³)</th>
-                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>Debit (m³/jam)</th>
-                                        <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem' }}>Sumber Air</th>
-                                        <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem' }}>BBM</th>
-                                        <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem' }}>Hydrant</th>
-                                        <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem' }}>Ket</th>
+                                    <tr style={{ background: '#003366', color: 'white' }}>
+                                        <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '600', fontSize: '0.75rem', width: '50px' }}>No</th>
+                                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '600', fontSize: '0.75rem' }}>Lokasi</th>
+                                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '600', fontSize: '0.75rem' }}>Wilayah</th>
+                                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '600', fontSize: '0.75rem' }}>Nama Dermaga</th>
+                                        <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '600', fontSize: '0.75rem' }}>Luas (m²)</th>
+                                        <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '600', fontSize: '0.75rem' }}>Kondisi (%)</th>
+                                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '600', fontSize: '0.75rem' }}>Tipe Kapal</th>
+                                        <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '600', fontSize: '0.75rem' }}>Daya (kVA)</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1049,62 +1018,31 @@ function Faslabuh() {
                                                 style={{
                                                     background: index % 2 === 0 ? '#ffffff' : '#f8fafc',
                                                     cursor: 'pointer',
-                                                    borderBottom: '1px solid #f1f5f9'
+                                                    borderBottom: '1px solid #f1f5f9',
+                                                    transition: 'all 0.2s'
                                                 }}
                                                 onMouseEnter={(e) => e.currentTarget.style.background = '#e0f2fe'}
                                                 onMouseLeave={(e) => e.currentTarget.style.background = index % 2 === 0 ? '#ffffff' : '#f8fafc'}
                                             >
-                                                <td style={{ padding: '6px 10px', textAlign: 'center', color: '#64748b' }}>{index + 1}</td>
-                                                <td style={{ padding: '6px 10px', color: '#334155' }}>{item.lokasi}</td>
-                                                <td style={{ padding: '6px 10px', color: '#334155', fontSize: '0.7rem' }}>{item.alamat || '-'}</td>
-                                                <td style={{ padding: '6px 10px', color: '#334155' }}>{item.wilayah}</td>
-                                                <td style={{ padding: '6px 10px', textAlign: 'center', fontFamily: FONT_MONO, fontSize: '0.65rem', color: '#64748b' }}>
-                                                    {item.lat && item.lon ? `${item.lat}, ${item.lon}` : '-'}
-                                                </td>
-                                                <td style={{ padding: '6px 10px', fontWeight: '600', color: '#ef4444' }}>{item.nama_dermaga}</td>
-                                                <td style={{ padding: '6px 10px', color: '#334155' }}>{item.konstruksi}</td>
-
-                                                {/* Dimensi */}
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.panjang_m)}</td>
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.lebar_m)}</td>
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.luas_m2)}</td>
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.draft_lwl_m)}</td>
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.pasut_hwl_lwl_m)}</td>
-                                                <td style={{ padding: '6px 10px', textAlign: 'center' }}>
+                                                <td style={{ padding: '10px 12px', textAlign: 'center', color: '#64748b', fontSize: '0.8rem' }}>{index + 1}</td>
+                                                <td style={{ padding: '10px 12px', color: '#334155', fontSize: '0.85rem', fontWeight: '500' }}>{item.lokasi || '-'}</td>
+                                                <td style={{ padding: '10px 12px', color: '#334155', fontSize: '0.85rem' }}>{item.wilayah || '-'}</td>
+                                                <td style={{ padding: '10px 12px', fontWeight: '600', color: '#003366', fontSize: '0.85rem' }}>{item.nama_dermaga || '-'}</td>
+                                                <td style={{ padding: '10px 12px', textAlign: 'right', color: '#334155', fontSize: '0.85rem', fontFamily: FONT_MONO }}>{fmt(item.luas_m2)}</td>
+                                                <td style={{ padding: '10px 12px', textAlign: 'center', fontSize: '0.8rem' }}>
                                                     <span style={{
-                                                        padding: '2px 8px',
-                                                        borderRadius: '4px',
-                                                        fontSize: '0.7rem',
+                                                        background: item.kondisi_persen >= 80 ? '#dcfce7' : item.kondisi_persen >= 50 ? '#fef3c7' : '#fee2e2',
+                                                        color: item.kondisi_persen >= 80 ? '#166534' : item.kondisi_persen >= 50 ? '#92400e' : '#991b1b',
+                                                        padding: '4px 10px',
+                                                        borderRadius: '12px',
                                                         fontWeight: '600',
-                                                        background: item.kondisi_percent > 70 ? '#dcfce7' : '#fef3c7',
-                                                        color: item.kondisi_percent > 70 ? '#15803d' : '#b45309'
+                                                        display: 'inline-block'
                                                     }}>
-                                                        {item.kondisi_percent}%
+                                                        {item.kondisi_persen ? `${item.kondisi_persen}%` : '-'}
                                                     </span>
                                                 </td>
-
-                                                <td style={{ padding: '6px 10px', fontSize: '0.7rem', color: '#334155' }}>{item.displacement_kri}</td>
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.berat_sandar_maks_ton)}</td>
-                                                <td style={{ padding: '6px 10px', fontSize: '0.7rem', color: '#334155' }}>{item.tipe_kapal}</td>
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.jumlah_maks)}</td>
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.kemampuan_plat_lantai_ton)}</td>
-                                                <td style={{ padding: '6px 10px', fontSize: '0.7rem', color: '#334155' }}>
-                                                    {item.jenis_ranmor ? `${item.jenis_ranmor} (${fmt(item.berat_ranmor_ton)}t)` : '-'}
-                                                </td>
-
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.titik_sambung_listrik)}</td>
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.kapasitas_a)}</td>
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.tegangan_v)}</td>
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.frek_hz)}</td>
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.daya_kva)}</td>
-                                                <td style={{ padding: '6px 10px', fontSize: '0.7rem', color: '#334155' }}>{item.sumber_listrik}</td>
-
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.kapasitas_air_gwt_m3)}</td>
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.debit_air_m3_jam)}</td>
-                                                <td style={{ padding: '6px 10px', fontSize: '0.7rem', color: '#334155' }}>{item.sumber_air}</td>
-                                                <td style={{ padding: '6px 10px', fontSize: '0.7rem', color: '#334155' }}>{item.kapasitas_bbm}</td>
-                                                <td style={{ padding: '6px 10px', fontSize: '0.7rem', color: '#334155' }}>{item.hydrant}</td>
-                                                <td style={{ padding: '6px 10px', fontSize: '0.7rem', color: '#334155' }}>{item.keterangan}</td>
+                                                <td style={{ padding: '10px 12px', color: '#334155', fontSize: '0.8rem' }}>{item.tipe_kapal || '-'}</td>
+                                                <td style={{ padding: '10px 12px', textAlign: 'right', color: '#334155', fontSize: '0.85rem', fontFamily: FONT_MONO }}>{fmt(item.daya_kva)}</td>
                                             </tr>
                                         )
                                     })}
