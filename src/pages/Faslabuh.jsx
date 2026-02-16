@@ -914,11 +914,11 @@ function Faslabuh() {
                 }}>
                     {/* Total Dermaga */}
                     <div style={{
-                        background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                        background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
                         borderRadius: '12px',
                         padding: '20px',
                         color: 'white',
-                        boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.3)'
+                        boxShadow: '0 4px 6px -1px rgba(139, 92, 246, 0.3)'
                     }}>
                         <div style={{ fontSize: '0.75rem', opacity: 0.9, marginBottom: '8px', fontWeight: '500' }}>Total Dermaga</div>
                         <div style={{ fontSize: '2rem', fontWeight: '700', fontFamily: FONT_MONO }}>{data.length}</div>
@@ -950,7 +950,7 @@ function Faslabuh() {
                                 ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
                                 : avgKondisi >= 50
                                     ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
-                                    : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                                    : 'linear-gradient(135deg, #64748b 0%, #475569 100%)';
                         })(),
                         borderRadius: '12px',
                         padding: '20px',
