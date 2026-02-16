@@ -933,7 +933,7 @@ function Faslabuh() {
                                 fontSize: '0.75rem'
                             }}>
                                 <thead>
-                                    <tr style={{ background: '#003366', color: 'white' }}>
+                                    <tr style={{ background: '#ef4444', color: 'white' }}>
                                         <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '600', fontSize: '0.7rem', width: '40px' }}>No</th>
                                         <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem' }}>Lokasi</th>
                                         <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem', width: '150px' }}>Alamat</th>
