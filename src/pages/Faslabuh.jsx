@@ -117,7 +117,41 @@ function Faslabuh() {
             const result = await response.json()
 
             // Parse JSON fields
-            setData(result)
+            // Map Backend Columns -> Frontend State Keys
+            // Map Backend Columns -> Frontend State Keys
+            const mappedResult = result.map(item => ({
+                ...item,
+                // Dimensi
+                panjang_m: item.panjang ? parseFloat(item.panjang) : null,
+                lebar_m: item.lebar ? parseFloat(item.lebar) : null,
+                luas_m2: item.luas ? parseFloat(item.luas) : null,
+                draft_lwl_m: item.draft_lwl ? parseFloat(item.draft_lwl) : null,
+                pasut_hwl_lwl_m: item.pasut_hwl_lwl ? parseFloat(item.pasut_hwl_lwl) : null,
+                kondisi_percent: item.kondisi ? parseFloat(item.kondisi) : null,
+
+                // Plat & Ranmor
+                kemampuan_plat_lantai_ton: item.plat_mst_ton ? parseFloat(item.plat_mst_ton) : null,
+                jenis_ranmor: item.plat_jenis_ranmor,
+                berat_ranmor_ton: item.plat_berat_max_ton ? parseFloat(item.plat_berat_max_ton) : null,
+
+                // Listrik
+                titik_sambung_listrik: item.listrik_jml_titik ? parseFloat(item.listrik_jml_titik) : null,
+                kapasitas_a: item.listrik_kap_amp ? parseFloat(item.listrik_kap_amp) : null,
+                tegangan_v: item.listrik_tegangan_volt ? parseFloat(item.listrik_tegangan_volt) : null,
+                frek_hz: item.listrik_frek_hz ? parseFloat(item.listrik_frek_hz) : null,
+                sumber_listrik: item.listrik_sumber,
+                daya_kva: item.listrik_daya_kva ? parseFloat(item.listrik_daya_kva) : null,
+
+                // Air
+                kapasitas_air_gwt_m3: item.air_gwt_m3 ? parseFloat(item.air_gwt_m3) : null,
+                debit_air_m3_jam: item.air_debit_m3_jam ? parseFloat(item.air_debit_m3_jam) : null,
+                sumber_air: item.air_sumber,
+
+                // BBM
+                kapasitas_bbm: item.bbm
+            }))
+
+            setData(mappedResult)
         } catch (error) {
             console.error('Error fetching faslabuh data:', error)
             alert('❌ Gagal memuat data: ' + error.message)
@@ -128,7 +162,7 @@ function Faslabuh() {
 
     const handleAddNew = () => {
         setSelectedItem({
-            lokasi: '', wilayah: '', lon: 0, lat: 0,
+            lokasi: '', wilayah: '', alamat: '', lon: 0, lat: 0,
             nama_dermaga: '', konstruksi: '',
             panjang_m: 0, lebar_m: 0, luas_m2: 0,
             draft_lwl_m: 0, pasut_hwl_lwl_m: 0, kondisi_percent: 0,
@@ -182,7 +216,9 @@ function Faslabuh() {
         // User request: "Not mandatory", so allow null/empty
         const toNum = (val) => {
             if (val === '' || val === null || val === undefined) return null
-            const parsed = parseFloat(val)
+            // Handle comma as decimal separator (Indonesian format)
+            const normalized = typeof val === 'string' ? val.replace(',', '.') : val
+            const parsed = parseFloat(normalized)
             return isNaN(parsed) ? null : parsed
         }
 
@@ -251,6 +287,7 @@ function Faslabuh() {
         const excelData = data.map(item => ({
             'Provinsi': item.provinsi,
             'Wilayah': item.wilayah,
+            'Alamat': item.alamat,
             'Lokasi': item.lokasi,
             'Nama Dermaga': item.nama_dermaga,
             'Kode Barang': item.kode_barang,
@@ -311,23 +348,47 @@ function Faslabuh() {
 
     const handleExportTemplate = () => {
         const templateHeaders = {
-            'Provinsi': '', 'Wilayah': '', 'Lokasi': '', 'Nama Dermaga': '',
-            'Kode Barang': '', 'No Sertifikat': '', 'Tgl Sertifikat': '',
-            'Longitude': '', 'Latitude': '',
-            'Konstruksi': '', 'Panjang (m)': '', 'Lebar (m)': '', 'Luas (m²)': '',
-            'Draft LWL (m)': '', 'Pasut HWL-LWL (m)': '', 'Kondisi (%)': '',
-            'Displacement KRI': '', 'Berat Sandar Maks (ton)': '', 'Tipe Kapal': '', 'Jumlah Maks': '',
-            'Kemampuan Plat Lantai (ton)': '', 'Jenis Ranmor': '', 'Berat Ranmor (ton)': '',
-            'Titik Sambung Listrik': '', 'Kapasitas (A)': '', 'Tegangan (V)': '', 'Frek (Hz)': '', 'Sumber Listrik': '', 'Daya (kVA)': '',
-            'Kapasitas Air GWT (m³)': '', 'Debit Air (m³/jam)': '', 'Sumber Air': '',
-            'Kapasitas BBM': '', 'Hydrant': '', 'Keterangan': ''
+            'No': '',
+            'No': '',
+            'Lokasi': '',
+            'Alamat': '',
+            'Wilayah': '',
+            'Longitude': '',
+            'Latitude': '',
+            'Nama Dermaga': '',
+            'Konstruksi': '',
+            'Panjang (m)': '',
+            'Lebar (m)': '',
+            'Luas (m²)': '',
+            'Draft LWL (m)': '',
+            'Pasut HWL-LWL (m)': '',
+            'Kondisi (%)': '',
+            'Displacement KRI': '',
+            'Berat Sandar Maks (ton)': '',
+            'Tipe Kapal': '',
+            'Jumlah Maks': '',
+            'Kemampuan Plat Lantai (ton)': '',
+            'Jenis Ranmor': '',
+            'Berat Ranmor (ton)': '',
+            'Titik Sambung Listrik': '',
+            'Kapasitas (A)': '',
+            'Tegangan (V)': '',
+            'Frek (Hz)': '',
+            'Daya (kVA)': '',
+            'Sumber Listrik': '',
+            'Kapasitas Air GWT (m³)': '',
+            'Debit Air (m³/jam)': '',
+            'Sumber Air': '',
+            'Kapasitas BBM': '',
+            'Hydrant': '',
+            'Keterangan': ''
         }
 
         const templateData = [templateHeaders] // Only headers
         const ws = XLSX.utils.json_to_sheet(templateData)
 
         // Set column widths
-        ws['!cols'] = Array(35).fill({ wch: 15 })
+        ws['!cols'] = Array(33).fill({ wch: 15 })
 
         const wb = XLSX.utils.book_new()
         XLSX.utils.book_append_sheet(wb, ws, "Template Faslabuh")
@@ -358,7 +419,9 @@ function Faslabuh() {
                 // --- DYNAMIC HEADER DETECTION ---
                 // Scan first 20 rows to find key columns
                 const headerMap = {
+                    no: -1,
                     lokasi: -1,
+                    alamat: -1,
                     wilayah: -1,
                     longitude: -1,
                     latitude: -1,
@@ -366,6 +429,7 @@ function Faslabuh() {
                     konstruksi: -1,
                     panjang: -1,
                     lebar: -1,
+                    luas: -1,
                     draft: -1,
                     pasut: -1,
                     kondisi: -1,
@@ -380,8 +444,8 @@ function Faslabuh() {
                     listrikAmp: -1,
                     listrikVolt: -1,
                     listrikHz: -1,
+                    listrikDaya: -1,
                     listrikSumber: -1,
-                    listrikKva: -1,
                     airGwt: -1,
                     airDebit: -1,
                     airSumber: -1,
@@ -390,8 +454,8 @@ function Faslabuh() {
                     ket: -1
                 }
 
-                // Helper to normalize string for matching
-                const norm = (val) => String(val || '').toUpperCase().trim()
+                // Helper to normalize string for matching (HANDLE NEWLINES!)
+                const norm = (val) => String(val || '').toUpperCase().replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim()
 
                 let detectedHeaderRow = 0
 
@@ -405,60 +469,88 @@ function Faslabuh() {
 
                         // LOCK: Only set if -1 (First match wins from Left to Right, Top to Bottom)
 
-                        // Main Identifiers
+                        if (headerMap.no === -1 && txt === 'NO') { headerMap.no = colIdx; matchCount++ }
                         if (headerMap.lokasi === -1 && txt === 'LOKASI') { headerMap.lokasi = colIdx; matchCount++ }
-                        if (headerMap.wilayah === -1 && (txt.includes('WILAYAH') || txt.includes('LANTAMAL'))) { headerMap.wilayah = colIdx; matchCount++ }
-                        if (headerMap.longitude === -1 && (txt.includes('LON') || (txt.includes('BUJUR')))) { headerMap.longitude = colIdx; matchCount++ }
-                        if (headerMap.latitude === -1 && (txt.includes('LAT') || (txt.includes('LINTANG')))) { headerMap.latitude = colIdx; matchCount++ }
-                        if (headerMap.nama === -1 && (txt === 'NAMA' || txt === 'DERMAGA' || txt === 'NAMA DERMAGA')) { headerMap.nama = colIdx; matchCount++ }
-                        if (headerMap.konstruksi === -1 && (txt === 'KONSTRUKSI' || txt === 'CONS')) headerMap.konstruksi = colIdx
+                        if (headerMap.alamat === -1 && (txt === 'ALAMAT' || txt.includes('ALAMAT'))) { headerMap.alamat = colIdx; matchCount++ }
+                        if (headerMap.wilayah === -1 && txt === 'WILAYAH') { headerMap.wilayah = colIdx; matchCount++ }
+                        if (headerMap.longitude === -1 && (txt.includes('LONGITUDE') || txt.includes('LON') || txt === 'X')) { headerMap.longitude = colIdx; matchCount++ }
+                        if (headerMap.latitude === -1 && (txt.includes('LATITUDE') || txt.includes('LAT') || txt === 'Y')) { headerMap.latitude = colIdx; matchCount++ }
+                        if (headerMap.nama === -1 && (txt.includes('NAMA DERMAGA') || txt === 'NAMA')) { headerMap.nama = colIdx; matchCount++ }
+                        if (headerMap.konstruksi === -1 && txt.includes('KONSTRUKSI')) { headerMap.konstruksi = colIdx; matchCount++ }
 
-                        // Dimensions
-                        if (headerMap.panjang === -1 && (txt === 'PANJANG' || txt === '(M)' || (txt.includes('PANJANG') && txt.includes('(M)')))) { headerMap.panjang = colIdx; matchCount++ }
-                        if (headerMap.lebar === -1 && (txt === 'LEBAR' || (txt.includes('LEBAR') && txt.includes('M')))) headerMap.lebar = colIdx
-                        if (headerMap.draft === -1 && (txt === 'DRAFT' || txt.includes('LWL') || txt.includes('DOLPHIN'))) headerMap.draft = colIdx
-                        if (headerMap.pasut === -1 && (txt.includes('PASUT') || txt.includes('HWL'))) headerMap.pasut = colIdx
-                        if (headerMap.kondisi === -1 && (txt === 'KONDISI' || txt.includes('KONDISI') || txt.includes('(%)'))) headerMap.kondisi = colIdx
+                        if (headerMap.panjang === -1 && (txt.includes('PANJANG') || txt === 'P (M)')) { headerMap.panjang = colIdx; matchCount++ }
+                        if (headerMap.lebar === -1 && (txt.includes('LEBAR') || txt === 'L (M)')) { headerMap.lebar = colIdx; matchCount++ }
+                        if (headerMap.luas === -1 && (txt.includes('LUAS'))) { headerMap.luas = colIdx; matchCount++ }
+                        if (headerMap.draft === -1 && (txt.includes('DRAFT'))) { headerMap.draft = colIdx; matchCount++ }
+                        if (headerMap.pasut === -1 && (txt.includes('PASUT'))) { headerMap.pasut = colIdx; matchCount++ }
+                        if (headerMap.kondisi === -1 && (txt.includes('KONDISI'))) { headerMap.kondisi = colIdx; matchCount++ }
 
-                        // Capabilities
-                        if (headerMap.sandarKri === -1 && (txt === 'KRI' || txt.includes('DISP'))) headerMap.sandarKri = colIdx
-                        if (headerMap.sandarTon === -1 && (txt.includes('BERAT') && txt.includes('SANDAR'))) headerMap.sandarTon = colIdx
-                        if (headerMap.tipeKapal === -1 && (txt.includes('TIPE') && txt.includes('KAPAL'))) headerMap.tipeKapal = colIdx
-                        if (headerMap.sandarJml === -1 && (txt.includes('JUMLAH') && !txt.includes('TITIK'))) headerMap.sandarJml = colIdx
+                        if (headerMap.sandarKri === -1 && (txt.includes('DISPLACEMENT') || txt.includes('DISP'))) { headerMap.sandarKri = colIdx; matchCount++ }
+                        if (headerMap.sandarTon === -1 && (txt.includes('BERAT SANDAR') || txt.includes('SANDAR MAKS'))) { headerMap.sandarTon = colIdx; matchCount++ }
+                        if (headerMap.tipeKapal === -1 && txt.includes('TIPE KAPAL')) { headerMap.tipeKapal = colIdx; matchCount++ }
+                        if (headerMap.sandarJml === -1 && txt.includes('JUMLAH')) { headerMap.sandarJml = colIdx; matchCount++ }
 
-                        // Facilities
-                        if (headerMap.platTon === -1 && (txt.includes('PLAT') || (txt.includes('KEMAMPUAN') && txt.includes('LANTAI')))) headerMap.platTon = colIdx
-                        if (headerMap.ranmorJenis === -1 && (txt.includes('RANMOR') && (txt.includes('JENIS') || txt.includes('MACAM')))) headerMap.ranmorJenis = colIdx
+                        if (headerMap.platTon === -1 && (txt.includes('PLAT LANTAI') || txt.includes('KEMAMPUAN PLAT'))) { headerMap.platTon = colIdx; matchCount++ }
+                        if (headerMap.ranmorJenis === -1 && txt.includes('JENIS RANMOR')) { headerMap.ranmorJenis = colIdx; matchCount++ }
+                        if (headerMap.ranmorTon === -1 && (txt.includes('BERAT RANMOR'))) { headerMap.ranmorTon = colIdx; matchCount++ }
 
-                        // Utilities
-                        if (headerMap.listrikTitik === -1 && (txt.includes('TITIK') && txt.includes('SAMBUNG'))) headerMap.listrikTitik = colIdx
-                        if (headerMap.listrikAmp === -1 && (txt.includes('KAPASITAS') && txt.includes('(A)'))) headerMap.listrikAmp = colIdx
-                        if (headerMap.listrikVolt === -1 && (txt.includes('TEGANGAN') || txt.includes('(V)'))) headerMap.listrikVolt = colIdx
-                        if (headerMap.listrikHz === -1 && (txt.includes('FREK') || txt === 'HZ' || txt === '(HZ)')) headerMap.listrikHz = colIdx
-                        if (headerMap.listrikSumber === -1 && txt === 'SUMBER') headerMap.listrikSumber = colIdx
+                        if (headerMap.listrikTitik === -1 && txt.includes('TITIK SAMBUNG')) { headerMap.listrikTitik = colIdx; matchCount++ }
+                        if (headerMap.listrikAmp === -1 && (txt.includes('KAPASITAS (A)') || txt === 'AMP' || txt === 'AMPERE')) { headerMap.listrikAmp = colIdx; matchCount++ }
+                        if (headerMap.listrikVolt === -1 && (txt.includes('TEGANGAN') || txt.includes('VOLT'))) { headerMap.listrikVolt = colIdx; matchCount++ }
+                        if (headerMap.listrikHz === -1 && (txt.includes('FREK') || txt.includes('HZ'))) { headerMap.listrikHz = colIdx; matchCount++ }
+                        if (headerMap.listrikDaya === -1 && (txt.includes('DAYA') || txt.includes('KVA'))) { headerMap.listrikDaya = colIdx; matchCount++ }
+                        if (headerMap.listrikSumber === -1 && txt.includes('SUMBER LISTRIK')) { headerMap.listrikSumber = colIdx; matchCount++ }
 
-                        if (headerMap.listrikKva === -1 && ((txt.includes('DAYA') && txt.includes('KVA')) || txt === 'KVA' || txt.includes('PLN'))) headerMap.listrikKva = colIdx
+                        if (headerMap.airGwt === -1 && (txt.includes('GWT') || (txt.includes('KAPASITAS') && txt.includes('AIR')))) { headerMap.airGwt = colIdx; matchCount++ }
+                        if (headerMap.airDebit === -1 && (txt.includes('DEBIT') || (txt.includes('DEBIT') && txt.includes('AIR')))) { headerMap.airDebit = colIdx; matchCount++ }
+                        if (headerMap.airSumber === -1 && txt.includes('SUMBER AIR')) { headerMap.airSumber = colIdx; matchCount++ }
 
-                        if (headerMap.airGwt === -1 && ((txt.includes('KAPASITAS') && txt.includes('AIR')) || (txt.includes('GWT') && txt.includes('M3')) || txt.includes('PDAM'))) headerMap.airGwt = colIdx
-                        if (headerMap.airDebit === -1 && (txt.includes('DEBIT') || (txt.includes('AIR') && txt.includes('JAM')))) headerMap.airDebit = colIdx
-
-                        if (headerMap.listrikSumber > -1 && headerMap.airSumber === -1 && txt === 'SUMBER' && colIdx > headerMap.listrikSumber) headerMap.airSumber = colIdx
-                        if (headerMap.airSumber === -1 && txt.includes('SUMBER') && txt.includes('AIR')) headerMap.airSumber = colIdx
-
-                        if (headerMap.bbm === -1 && (txt.includes('BBM') || txt.includes('SOLAR'))) headerMap.bbm = colIdx
-                        if (headerMap.hydrant === -1 && txt.includes('HYDRANT')) headerMap.hydrant = colIdx
-
-                        if (headerMap.ket === -1 && (txt === 'KET' || txt === 'KETERANGAN')) headerMap.ket = colIdx
+                        if (headerMap.bbm === -1 && (txt.includes('BBM') || txt.includes('KAPASITAS BBM'))) { headerMap.bbm = colIdx; matchCount++ }
+                        if (headerMap.hydrant === -1 && txt.includes('HYDRANT')) { headerMap.hydrant = colIdx; matchCount++ }
+                        if (headerMap.ket === -1 && (txt.includes('KETERANGAN') || txt === 'KET')) { headerMap.ket = colIdx; matchCount++ }
                     })
 
-                    if (matchCount >= 2) detectedHeaderRow = r
+                    if (matchCount >= 4) detectedHeaderRow = r // Require a bit more confidence
                 }
 
-                // Fallback Indices (Based on visual observation of standard complex excel) if dynamic fails
-                if (headerMap.panjang === -1) headerMap.panjang = 4 // Col E
-                if (headerMap.lebar === -1) headerMap.lebar = 5   // Col F
-                if (headerMap.konstruksi === -1) headerMap.konstruksi = 3 // Col D
-                if (headerMap.nama === -1) headerMap.nama = 2 // Col C
+                // Fallback Indices based on typical order if dynamic fails totally (optional but safer)
+                if (headerMap.nama === -1) {
+                    // Try to guess based on standard template order
+                    // No=0, Lokasi=1, Wilayah=2, Lon=3, Lat=4, Nama=5 ...
+                    headerMap.no = 0
+                    headerMap.lokasi = 1
+                    headerMap.alamat = 2
+                    headerMap.wilayah = 3
+                    headerMap.longitude = 4
+                    headerMap.latitude = 5
+                    headerMap.nama = 6
+                    headerMap.konstruksi = 7
+                    headerMap.panjang = 8
+                    headerMap.lebar = 9
+                    headerMap.luas = 10
+                    headerMap.draft = 11
+                    headerMap.pasut = 12
+                    headerMap.kondisi = 13
+                    headerMap.sandarKri = 14
+                    headerMap.sandarTon = 15
+                    headerMap.tipeKapal = 16
+                    headerMap.sandarJml = 17
+                    headerMap.platTon = 18
+                    headerMap.ranmorJenis = 19
+                    headerMap.ranmorTon = 20
+                    headerMap.listrikTitik = 21
+                    headerMap.listrikAmp = 22
+                    headerMap.listrikVolt = 23
+                    headerMap.listrikHz = 24
+                    headerMap.listrikDaya = 25
+                    headerMap.listrikSumber = 26
+                    headerMap.airGwt = 27
+                    headerMap.airDebit = 28
+                    headerMap.airSumber = 29
+                    headerMap.bbm = 30
+                    headerMap.hydrant = 31
+                    headerMap.ket = 32
+                }
 
                 console.log('🔍 Detected Column Indices:', headerMap)
 
@@ -502,17 +594,17 @@ function Faslabuh() {
                         return null
                     }
 
-                    // Check for valid numeric dimension data to confirm this is a data row
-                    const validLen = typeof row[idx.panjang] === 'number' || parseFloat(row[idx.panjang]) > 0
-                    const validWid = typeof row[idx.lebar] === 'number' || parseFloat(row[idx.lebar]) > 0
+                    // Relaxed Row Validation: If it has (Name OR Location) AND isn't just a header repetition
+                    // Check if it's likely a header row repetition
+                    const txtName = String(row[idx.nama] || '').toUpperCase()
+                    if (txtName.includes('NAMA DERMAGA') || txtName === 'NAMA') return null
 
-                    if (!validLen && !validWid) {
-                        // Might be a header row or just name row
-                        if (colAnchor && !colAnchor.includes('NO.') && !colAnchor.includes('WILAYAH')) {
-                            lastNamaDermaga = colAnchor
-                        }
-                        return null
-                    }
+                    // If it has no name and no known dimensions, checking if it's empty
+                    const rawP = row[idx.panjang]
+                    const rawL = row[idx.lebar]
+
+                    // If absolutely empty row, skip
+                    if (!colAnchor && !rawP && !rawL && !row[idx.lokasi]) return null
 
                     // Name resolution
                     let displayNama = lastNamaDermaga
@@ -526,7 +618,20 @@ function Faslabuh() {
                     const parseNum = (val) => {
                         if (typeof val === 'number') return val
                         if (!val || val === '-') return 0
-                        const clean = String(val).replace(/,/g, '').trim()
+                        let clean = String(val).trim()
+
+                        // Handle Indonesian format: "1.200,50" -> "1200.50"
+                        if (clean.includes(',') && !clean.includes('.')) {
+                            clean = clean.replace(/,/g, '.')
+                        } else if (clean.includes(',') && clean.includes('.')) {
+                            // Ambiguous, assume dot is thousands, comma is decimal (common in ID)
+                            // Remove dots, replace comma with dot
+                            clean = clean.replace(/\./g, '').replace(/,/g, '.')
+                        }
+
+                        // Remove any other non-numeric chars except dot and minus
+                        clean = clean.replace(/[^0-9.-]/g, '')
+
                         return parseFloat(clean) || 0
                     }
 
@@ -535,8 +640,9 @@ function Faslabuh() {
                         provinsi: '',
                         wilayah: lastWilayah || 'Unknown',
                         lokasi: lastLokasi || '',
-                        lon: idx.longitude > -1 ? row[idx.longitude] : '',
-                        lat: idx.latitude > -1 ? row[idx.latitude] : '',
+                        alamat: idx.alamat > -1 ? row[idx.alamat] : '',
+                        lon: idx.longitude > -1 ? parseNum(row[idx.longitude]) : null,
+                        lat: idx.latitude > -1 ? parseNum(row[idx.latitude]) : null,
                         nama_dermaga: displayNama || 'Unnamed Dermaga',
                         konstruksi: !valKonstruksi.startsWith('-') ? valKonstruksi : '',
 
@@ -560,8 +666,8 @@ function Faslabuh() {
                         kapasitas_a: idx.listrikAmp > -1 ? parseNum(row[idx.listrikAmp]) : 0,
                         tegangan_v: idx.listrikVolt > -1 ? parseNum(row[idx.listrikVolt]) : 220,
                         frek_hz: idx.listrikHz > -1 ? parseNum(row[idx.listrikHz]) : 50,
+                        daya_kva: idx.listrikDaya > -1 ? parseNum(row[idx.listrikDaya]) : 0,
                         sumber_listrik: idx.listrikSumber > -1 ? row[idx.listrikSumber] : '',
-                        daya_kva: idx.listrikKva > -1 ? parseNum(row[idx.listrikKva]) : 0,
 
                         kapasitas_air_gwt_m3: idx.airGwt > -1 ? parseNum(row[idx.airGwt]) : 0,
                         debit_air_m3_jam: idx.airDebit > -1 ? parseNum(row[idx.airDebit]) : 0,
@@ -569,7 +675,14 @@ function Faslabuh() {
 
                         kapasitas_bbm: idx.bbm > -1 ? row[idx.bbm] : '',
                         hydrant: idx.hydrant > -1 ? row[idx.hydrant] : '',
-                        keterangan: idx.ket > -1 ? row[idx.ket] : ''
+                        keterangan: idx.ket > -1 ? row[idx.ket] : '',
+
+                        // Construct complex objects for preview consistency
+                        sandar_items: (idx.tipeKapal > -1 || idx.sandarTon > -1) ? [{
+                            tipe: idx.tipeKapal > -1 ? row[idx.tipeKapal] : 'Unknown',
+                            ton: idx.sandarTon > -1 ? parseNum(row[idx.sandarTon]) : 0,
+                            jumlah: idx.sandarJml > -1 ? (parseInt(row[idx.sandarJml]) || 1) : 1
+                        }] : []
                     }
 
                 }).filter(item => item !== null)
@@ -590,6 +703,12 @@ function Faslabuh() {
         reader.readAsBinaryString(file)
         e.target.value = '' // Reset input
     }
+
+    // ... code continues ...
+
+    // Later in the render part (Review Table):
+    // This replace block targets the mappedData construction primarily, I will use a separate replace for the table rendering to be safe and clean.
+
 
     const handleImportToDatabase = async () => {
         if (previewData.length === 0) {
@@ -670,7 +789,10 @@ function Faslabuh() {
                 method: 'DELETE'
             })
 
-            if (!response.ok) throw new Error('Failed to delete')
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({ error: response.statusText }));
+                throw new Error(errData.error || errData.details || 'Failed to delete');
+            }
 
             alert('✅ Semua data berhasil dihapus!')
             fetchData()
@@ -814,6 +936,7 @@ function Faslabuh() {
                                     <tr style={{ background: '#003366', color: 'white' }}>
                                         <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '600', fontSize: '0.7rem', width: '40px' }}>No</th>
                                         <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem' }}>Lokasi</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem', width: '150px' }}>Alamat</th>
                                         <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem' }}>Wilayah</th>
                                         <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '600', fontSize: '0.7rem' }}>Lon/Lat</th>
                                         <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem' }}>Nama Dermaga</th>
@@ -854,6 +977,7 @@ function Faslabuh() {
                                 </thead>
                                 <tbody>
                                     {data.map((item, index) => {
+                                        const fmt = (n) => n != null ? parseFloat(n).toLocaleString('id-ID', { maximumFractionDigits: 2 }) : '-'
                                         return (
                                             <tr
                                                 key={item.id}
@@ -868,6 +992,7 @@ function Faslabuh() {
                                             >
                                                 <td style={{ padding: '6px 10px', textAlign: 'center', color: '#64748b' }}>{index + 1}</td>
                                                 <td style={{ padding: '6px 10px', color: '#334155' }}>{item.lokasi}</td>
+                                                <td style={{ padding: '6px 10px', color: '#334155', fontSize: '0.7rem' }}>{item.alamat || '-'}</td>
                                                 <td style={{ padding: '6px 10px', color: '#334155' }}>{item.wilayah}</td>
                                                 <td style={{ padding: '6px 10px', textAlign: 'center', fontFamily: FONT_MONO, fontSize: '0.65rem', color: '#64748b' }}>
                                                     {item.lat && item.lon ? `${item.lat}, ${item.lon}` : '-'}
@@ -875,11 +1000,12 @@ function Faslabuh() {
                                                 <td style={{ padding: '6px 10px', fontWeight: '600', color: '#003366' }}>{item.nama_dermaga}</td>
                                                 <td style={{ padding: '6px 10px', color: '#334155' }}>{item.konstruksi}</td>
 
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.panjang_m}</td>
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.lebar_m}</td>
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.luas_m2}</td>
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.draft_lwl_m}</td>
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.pasut_hwl_lwl_m}</td>
+                                                {/* Dimensi */}
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.panjang_m)}</td>
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.lebar_m)}</td>
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.luas_m2)}</td>
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.draft_lwl_m)}</td>
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.pasut_hwl_lwl_m)}</td>
                                                 <td style={{ padding: '6px 10px', textAlign: 'center' }}>
                                                     <span style={{
                                                         padding: '2px 8px',
@@ -894,23 +1020,23 @@ function Faslabuh() {
                                                 </td>
 
                                                 <td style={{ padding: '6px 10px', fontSize: '0.7rem', color: '#334155' }}>{item.displacement_kri}</td>
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.berat_sandar_maks_ton}</td>
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.berat_sandar_maks_ton)}</td>
                                                 <td style={{ padding: '6px 10px', fontSize: '0.7rem', color: '#334155' }}>{item.tipe_kapal}</td>
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.jumlah_maks}</td>
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.kemampuan_plat_lantai_ton}</td>
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.jumlah_maks)}</td>
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.kemampuan_plat_lantai_ton)}</td>
                                                 <td style={{ padding: '6px 10px', fontSize: '0.7rem', color: '#334155' }}>
-                                                    {item.jenis_ranmor ? `${item.jenis_ranmor} (${item.berat_ranmor_ton}t)` : '-'}
+                                                    {item.jenis_ranmor ? `${item.jenis_ranmor} (${fmt(item.berat_ranmor_ton)}t)` : '-'}
                                                 </td>
 
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.titik_sambung_listrik}</td>
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.kapasitas_a}</td>
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.tegangan_v}</td>
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.frek_hz}</td>
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.daya_kva}</td>
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.titik_sambung_listrik)}</td>
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.kapasitas_a)}</td>
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.tegangan_v)}</td>
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.frek_hz)}</td>
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.daya_kva)}</td>
                                                 <td style={{ padding: '6px 10px', fontSize: '0.7rem', color: '#334155' }}>{item.sumber_listrik}</td>
 
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.kapasitas_air_gwt_m3}</td>
-                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.debit_air_m3_jam}</td>
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.kapasitas_air_gwt_m3)}</td>
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{fmt(item.debit_air_m3_jam)}</td>
                                                 <td style={{ padding: '6px 10px', fontSize: '0.7rem', color: '#334155' }}>{item.sumber_air}</td>
                                                 <td style={{ padding: '6px 10px', fontSize: '0.7rem', color: '#334155' }}>{item.kapasitas_bbm}</td>
                                                 <td style={{ padding: '6px 10px', fontSize: '0.7rem', color: '#334155' }}>{item.hydrant}</td>
@@ -925,96 +1051,152 @@ function Faslabuh() {
 
                     {/* Modal - Modern 2026 No Box */}
                     {isModalOpen && selectedItem && (
+                        /* Modal Overlay with Glassmorphism */
                         <div style={{
                             position: 'fixed',
                             top: 0,
                             left: 0,
                             right: 0,
                             bottom: 0,
-                            background: 'rgba(0, 0, 0, 0.5)',
+                            background: 'rgba(15, 23, 42, 0.65)',
+                            backdropFilter: 'blur(12px)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             zIndex: 1000,
-                            padding: '20px'
+                            padding: '20px',
+                            animation: 'fadeIn 0.2s ease-out'
                         }} onClick={handleCancel}>
+
+                            {/* Modal Card */}
                             <div style={{
-                                background: 'white',
-                                borderRadius: '12px',
+                                background: '#ffffff',
+                                borderRadius: '24px',
                                 maxWidth: '1200px',
                                 width: '100%',
                                 maxHeight: '90vh',
                                 overflowY: 'auto',
-                                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+                                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                                position: 'relative',
+                                display: 'flex',
+                                flexDirection: 'column'
                             }} onClick={e => e.stopPropagation()}>
 
-                                {/* Header */}
+                                {/* Sticky Header */}
                                 <div style={{
-                                    padding: '20px 24px',
-                                    borderBottom: '1px solid #e2e8f0',
+                                    padding: '24px 32px',
+                                    borderBottom: '1px solid #f1f5f9',
                                     display: 'flex',
                                     justifyContent: 'space-between',
                                     alignItems: 'center',
                                     position: 'sticky',
                                     top: 0,
-                                    background: 'white',
-                                    zIndex: 10
+                                    background: 'rgba(255, 255, 255, 0.95)',
+                                    backdropFilter: 'blur(16px)',
+                                    zIndex: 20
                                 }}>
                                     <div>
-                                        <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700', color: '#0f172a' }}>
-                                            {isEditMode ? '✏️ Edit Data Faslabuh' : selectedItem.nama_dermaga}
-                                        </h2>
-                                        <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
-                                            {selectedItem.lokasi} • {selectedItem.provinsi}
-                                        </p>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <div style={{
+                                                width: '40px', height: '40px',
+                                                background: isEditMode ? '#dbeafe' : '#f1f5f9',
+                                                borderRadius: '12px',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                fontSize: '1.2rem'
+                                            }}>
+                                                {isEditMode ? '✏️' : '⚓'}
+                                            </div>
+                                            <div>
+                                                <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.025em' }}>
+                                                    {isEditMode ? 'Edit Data Faslabuh' : (selectedItem.nama_dermaga || 'Detail Dermaga')}
+                                                </h2>
+                                                <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>
+                                                    {selectedItem.lokasi ? `${selectedItem.lokasi} • ` : ''}{selectedItem.provinsi || 'Data belum lengkap'}
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                        {isEditMode && (
+
+                                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                        {!isEditMode ? (
+                                            <>
+                                                <button
+                                                    onClick={() => setIsEditMode(true)}
+                                                    style={{
+                                                        background: '#3b82f6',
+                                                        color: 'white',
+                                                        border: 'none',
+                                                        borderRadius: '12px',
+                                                        padding: '10px 20px',
+                                                        fontSize: '0.85rem',
+                                                        fontWeight: '600',
+                                                        cursor: 'pointer',
+                                                        boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.5)',
+                                                        transition: 'all 0.2s',
+                                                        display: 'flex', alignItems: 'center', gap: '8px'
+                                                    }}
+                                                >
+                                                    ✏️ Edit
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(selectedItem.id)}
+                                                    style={{
+                                                        background: '#ffffff',
+                                                        color: '#ef4444',
+                                                        border: '1px solid #fee2e2',
+                                                        borderRadius: '12px',
+                                                        padding: '10px 20px',
+                                                        fontSize: '0.85rem',
+                                                        fontWeight: '600',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.2s',
+                                                        display: 'flex', alignItems: 'center', gap: '8px'
+                                                    }}
+                                                >
+                                                    🗑️ Hapus
+                                                </button>
+                                            </>
+                                        ) : (
                                             <>
                                                 <button onClick={handleSave} style={{
                                                     background: '#10b981',
                                                     color: 'white',
                                                     border: 'none',
-                                                    borderRadius: '6px',
-                                                    padding: '6px 14px',
-                                                    fontSize: '0.8rem',
+                                                    borderRadius: '12px',
+                                                    padding: '10px 24px',
+                                                    fontSize: '0.9rem',
+                                                    fontWeight: '600',
                                                     cursor: 'pointer',
-                                                    fontFamily: FONT_SYSTEM
+                                                    boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.5)',
+                                                    display: 'flex', alignItems: 'center', gap: '8px'
                                                 }}>
-                                                    💾 Simpan
+                                                    💾 Simpan Perubahan
                                                 </button>
                                                 <button onClick={handleCancel} style={{
-                                                    background: '#6b7280',
-                                                    color: 'white',
+                                                    background: '#f1f5f9',
+                                                    color: '#64748b',
                                                     border: 'none',
-                                                    borderRadius: '6px',
-                                                    padding: '6px 14px',
-                                                    fontSize: '0.8rem',
+                                                    borderRadius: '12px',
+                                                    padding: '10px 20px',
+                                                    fontSize: '0.9rem',
+                                                    fontWeight: '600',
                                                     cursor: 'pointer',
-                                                    fontFamily: FONT_SYSTEM
                                                 }}>
-                                                    ✕ Batal
-                                                </button>
-                                                <button onClick={() => handleDelete(selectedItem.id)} style={{
-                                                    background: '#ef4444',
-                                                    color: 'white',
-                                                    border: 'none',
-                                                    borderRadius: '6px',
-                                                    padding: '6px 14px',
-                                                    fontSize: '0.8rem',
-                                                    cursor: 'pointer',
-                                                    fontFamily: FONT_SYSTEM
-                                                }}>
-                                                    🗑️ Hapus
+                                                    Batal
                                                 </button>
                                             </>
                                         )}
                                         <button onClick={handleCancel} style={{
-                                            background: 'none',
-                                            border: 'none',
-                                            fontSize: '24px',
+                                            background: '#f8fafc',
+                                            border: '1px solid #e2e8f0',
+                                            borderRadius: '50%',
+                                            width: '40px',
+                                            height: '40px',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            fontSize: '18px',
                                             cursor: 'pointer',
-                                            color: '#94a3b8'
+                                            color: '#64748b',
+                                            marginLeft: '8px'
                                         }}>
                                             ×
                                         </button>
@@ -1047,6 +1229,14 @@ function Faslabuh() {
                                                 )}
                                             </div>
                                             <div style={{ gridColumn: 'span 2' }}>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>Alamat Lengkap</label>
+                                                {isEditMode ? (
+                                                    <textarea value={selectedItem.alamat ?? ''} onChange={e => updateField('alamat', e.target.value)} rows="2" style={{ width: '100%', padding: '8px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_SYSTEM, resize: 'vertical' }} placeholder="Jl. Raya Pelabuhan No..." />
+                                                ) : (
+                                                    <div style={{ padding: '6px 0', fontSize: '0.85rem', color: '#475569', lineHeight: '1.4' }}>{selectedItem.alamat || '-'}</div>
+                                                )}
+                                            </div>
+                                            <div style={{ gridColumn: 'span 2' }}>
                                                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>Nama Dermaga</label>
                                                 {isEditMode ? (
                                                     <input value={selectedItem.nama_dermaga ?? ''} onChange={e => updateField('nama_dermaga', e.target.value)} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_SYSTEM }} />
@@ -1057,7 +1247,7 @@ function Faslabuh() {
                                             <div>
                                                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>Longitude</label>
                                                 {isEditMode ? (
-                                                    <input type="number" step="any" value={selectedItem.lon ?? ''} onChange={e => updateField('lon', e.target.value)} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_MONO }} />
+                                                    <input type="text" placeholder="106.123 or 106°45'E" value={selectedItem.lon ?? ''} onChange={e => updateField('lon', e.target.value)} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_MONO }} />
                                                 ) : (
                                                     <div style={{ padding: '6px 0', fontSize: '0.85rem', color: '#0f172a', fontFamily: FONT_MONO }}>{selectedItem.lon || '-'}</div>
                                                 )}
@@ -1065,7 +1255,7 @@ function Faslabuh() {
                                             <div>
                                                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>Latitude</label>
                                                 {isEditMode ? (
-                                                    <input type="number" step="any" value={selectedItem.lat ?? ''} onChange={e => updateField('lat', e.target.value)} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_MONO }} />
+                                                    <input type="text" placeholder="-6.123 or 6°08'S" value={selectedItem.lat ?? ''} onChange={e => updateField('lat', e.target.value)} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_MONO }} />
                                                 ) : (
                                                     <div style={{ padding: '6px 0', fontSize: '0.85rem', color: '#0f172a', fontFamily: FONT_MONO }}>{selectedItem.lat || '-'}</div>
                                                 )}
@@ -1432,202 +1622,205 @@ function Faslabuh() {
                         </div>
                     )}
                 </>
-            )}
+            )
+            }
 
             {/* Import Preview Modal */}
-            {showPreview && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'rgba(0, 0, 0, 0.5)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 1000,
-                    padding: '20px'
-                }} onClick={() => setShowPreview(false)}>
+            {
+                showPreview && (
                     <div style={{
-                        background: 'white',
-                        borderRadius: '12px',
-                        maxWidth: '1400px',
-                        width: '100%',
-                        maxHeight: '90vh',
-                        overflowY: 'auto',
-                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
-                    }} onClick={e => e.stopPropagation()}>
-
-                        {/* Header */}
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'rgba(0, 0, 0, 0.5)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 1000,
+                        padding: '20px'
+                    }} onClick={() => setShowPreview(false)}>
                         <div style={{
-                            padding: '20px 24px',
-                            borderBottom: '1px solid #e2e8f0',
-                            position: 'sticky',
-                            top: 0,
                             background: 'white',
-                            zIndex: 10
-                        }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div>
-                                    <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700', color: '#0f172a' }}>
-                                        👁️ Preview Import Data Faslabuh
-                                    </h2>
-                                    <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
-                                        Total: <strong>{previewData.length}</strong> baris data
-                                    </p>
-                                </div>
-                                <button onClick={() => setShowPreview(false)} style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    fontSize: '24px',
-                                    cursor: 'pointer',
-                                    color: '#94a3b8'
-                                }}>
-                                    ×
-                                </button>
-                            </div>
+                            borderRadius: '12px',
+                            maxWidth: '1400px',
+                            width: '100%',
+                            maxHeight: '90vh',
+                            overflowY: 'auto',
+                            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+                        }} onClick={e => e.stopPropagation()}>
 
-                            {/* Mode Selection */}
-                            <div style={{ marginTop: '16px', display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>
-                                    Mode Import:
-                                </label>
-                                <select
-                                    value={importMode}
-                                    onChange={(e) => setImportMode(e.target.value)}
-                                    style={{
-                                        padding: '6px 12px',
-                                        fontSize: '0.8rem',
-                                        border: '1px solid #cbd5e1',
-                                        borderRadius: '4px',
-                                        fontFamily: FONT_SYSTEM
-                                    }}
-                                >
-                                    <option value="upsert">✅ Upsert (Tambah & Update Otomatis)</option>
-                                    <option value="insert-only">➕ Insert Only (Hanya Tambah Baru)</option>
-                                    <option value="update-only">🔄 Update Only (Hanya Update Existing)</option>
-                                </select>
-                                <button
-                                    onClick={handleImportToDatabase}
-                                    disabled={importing}
-                                    style={{
-                                        background: importing ? '#94a3b8' : '#10b981',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '6px',
-                                        padding: '6px 16px',
-                                        fontSize: '0.85rem',
-                                        cursor: importing ? 'not-allowed' : 'pointer',
-                                        fontFamily: FONT_SYSTEM,
-                                        fontWeight: '600'
-                                    }}
-                                >
-                                    {importing ? '⏳ Importing...' : '🚀 Import ke Database'}
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Preview Table */}
-                        <div style={{ padding: '16px 24px' }}>
+                            {/* Header */}
                             <div style={{
-                                border: '1px solid #e2e8f0',
-                                borderRadius: '6px',
-                                overflow: 'hidden'
+                                padding: '20px 24px',
+                                borderBottom: '1px solid #e2e8f0',
+                                position: 'sticky',
+                                top: 0,
+                                background: 'white',
+                                zIndex: 10
                             }}>
-                                <div style={{
-                                    overflowX: 'auto',
-                                    maxHeight: '500px',
-                                    overflowY: 'auto'
-                                }}>
-                                    <table style={{
-                                        width: '100%',
-                                        borderCollapse: 'collapse',
-                                        fontSize: '0.75rem'
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700', color: '#0f172a' }}>
+                                            👁️ Preview Import Data Faslabuh
+                                        </h2>
+                                        <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                                            Total: <strong>{previewData.length}</strong> baris data
+                                        </p>
+                                    </div>
+                                    <button onClick={() => setShowPreview(false)} style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        fontSize: '24px',
+                                        cursor: 'pointer',
+                                        color: '#94a3b8'
                                     }}>
-                                        <thead>
-                                            <tr style={{ background: '#003366', color: 'white' }}>
-                                                <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>No</th>
-                                                <th style={{ padding: '8px 6px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5, minWidth: '80px' }}>Provinsi</th>
-                                                <th style={{ padding: '8px 6px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5, minWidth: '80px' }}>Wilayah</th>
-                                                <th style={{ padding: '8px 6px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5, minWidth: '120px' }}>Nama Dermaga</th>
-                                                <th style={{ padding: '8px 6px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5, minWidth: '100px' }}>Konstruksi</th>
-                                                <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>P (m)</th>
-                                                <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>L (m)</th>
-                                                <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>Draft</th>
-                                                <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>Pasut</th>
-                                                <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>Kondisi</th>
-                                                <th style={{ padding: '8px 6px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5, minWidth: '100px' }}>Sandar</th>
-                                                <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>Plat MST</th>
-                                                <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>Listrik</th>
-                                                <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>Air</th>
-                                                <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>BBM</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {previewData.map((item, index) => (
-                                                <tr
-                                                    key={index}
-                                                    style={{
-                                                        background: index % 2 === 0 ? '#ffffff' : '#f8fafc',
-                                                        borderBottom: '1px solid #f1f5f9'
-                                                    }}
-                                                >
-                                                    <td style={{ padding: '6px 6px', textAlign: 'center', color: '#64748b', fontSize: '0.7rem' }}>{index + 1}</td>
-                                                    <td style={{ padding: '6px 6px', color: '#475569', fontSize: '0.7rem' }}>{item.provinsi || '-'}</td>
-                                                    <td style={{ padding: '6px 6px', color: '#64748b', fontSize: '0.65rem' }}>{item.wilayah || '-'}</td>
-                                                    <td style={{ padding: '6px 6px', fontWeight: '600', color: '#003366', fontSize: '0.75rem' }}>{item.nama_dermaga || '-'}</td>
-                                                    <td style={{ padding: '6px 6px', color: '#334155', fontSize: '0.65rem' }}>{item.konstruksi || '-'}</td>
-                                                    <td style={{ padding: '6px 6px', textAlign: 'right', fontFamily: FONT_MONO, fontSize: '0.7rem' }}>{item.panjang || 0}</td>
-                                                    <td style={{ padding: '6px 6px', textAlign: 'right', fontFamily: FONT_MONO, fontSize: '0.7rem' }}>{item.lebar || 0}</td>
-                                                    <td style={{ padding: '6px 6px', textAlign: 'right', fontFamily: FONT_MONO, fontSize: '0.7rem' }}>{item.draft_lwl || 0}</td>
-                                                    <td style={{ padding: '6px 6px', textAlign: 'right', fontFamily: FONT_MONO, fontSize: '0.7rem' }}>{item.pasut_hwl_lwl || 0}</td>
-                                                    <td style={{ padding: '6px 6px', textAlign: 'center' }}>
-                                                        <span style={{
-                                                            padding: '2px 6px',
-                                                            borderRadius: '4px',
-                                                            fontSize: '0.65rem',
-                                                            fontWeight: '600',
-                                                            background: item.kondisi > 70 ? '#dcfce7' : '#fef3c7',
-                                                            color: item.kondisi > 70 ? '#15803d' : '#b45309'
-                                                        }}>
-                                                            {item.kondisi || 0}%
-                                                        </span>
-                                                    </td>
-                                                    <td style={{ padding: '6px 6px', fontSize: '0.65rem', color: '#64748b' }}>
-                                                        {item.sandar_items?.length > 0 ? item.sandar_items.map(s => `${s.jumlah}x ${s.tipe} (${s.ton}t)`).join(', ') : '-'}
-                                                    </td>
-                                                    <td style={{ padding: '6px 6px', textAlign: 'right', fontFamily: FONT_MONO, fontSize: '0.7rem' }}>{item.plat_mst_ton || '-'}</td>
-                                                    <td style={{ padding: '6px 6px', textAlign: 'center', fontSize: '0.65rem' }}>
-                                                        {item.listrik_sumber || '-'}{item.listrik_daya_kva ? ` (${item.listrik_daya_kva}kVA)` : ''}
-                                                    </td>
-                                                    <td style={{ padding: '6px 6px', textAlign: 'center', fontSize: '0.65rem' }}>
-                                                        {item.air_sumber || '-'}{item.air_gwt_m3 ? ` (${item.air_gwt_m3}m³)` : ''}
-                                                    </td>
-                                                    <td style={{ padding: '6px 6px', textAlign: 'center', fontSize: '0.65rem' }}>{item.bbm || '-'}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                        ×
+                                    </button>
+                                </div>
+
+                                {/* Mode Selection */}
+                                <div style={{ marginTop: '16px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                    <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>
+                                        Mode Import:
+                                    </label>
+                                    <select
+                                        value={importMode}
+                                        onChange={(e) => setImportMode(e.target.value)}
+                                        style={{
+                                            padding: '6px 12px',
+                                            fontSize: '0.8rem',
+                                            border: '1px solid #cbd5e1',
+                                            borderRadius: '4px',
+                                            fontFamily: FONT_SYSTEM
+                                        }}
+                                    >
+                                        <option value="upsert">✅ Upsert (Tambah & Update Otomatis)</option>
+                                        <option value="insert-only">➕ Insert Only (Hanya Tambah Baru)</option>
+                                        <option value="update-only">🔄 Update Only (Hanya Update Existing)</option>
+                                    </select>
+                                    <button
+                                        onClick={handleImportToDatabase}
+                                        disabled={importing}
+                                        style={{
+                                            background: importing ? '#94a3b8' : '#10b981',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            padding: '6px 16px',
+                                            fontSize: '0.85rem',
+                                            cursor: importing ? 'not-allowed' : 'pointer',
+                                            fontFamily: FONT_SYSTEM,
+                                            fontWeight: '600'
+                                        }}
+                                    >
+                                        {importing ? '⏳ Importing...' : '🚀 Import ke Database'}
+                                    </button>
                                 </div>
                             </div>
 
-                            {/* Data Summary */}
-                            <div style={{ marginTop: '12px', padding: '12px', background: '#f8fafc', borderRadius: '6px', fontSize: '0.75rem', color: '#475569' }}>
-                                <strong>📊 Ringkasan Data:</strong>
-                                <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
-                                    <li>Total baris: <strong>{previewData.length}</strong></li>
-                                    <li>Dengan Sandar Items: <strong>{previewData.filter(d => d.sandar_items?.length > 0).length}</strong></li>
-                                    <li>Dengan Listrik: <strong>{previewData.filter(d => d.listrik_sumber).length}</strong></li>
-                                    <li>Dengan Air: <strong>{previewData.filter(d => d.air_sumber).length}</strong></li>
-                                    <li>Dengan BBM: <strong>{previewData.filter(d => d.bbm).length}</strong></li>
-                                </ul>
+                            {/* Preview Table */}
+                            <div style={{ padding: '16px 24px' }}>
+                                <div style={{
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: '6px',
+                                    overflow: 'hidden'
+                                }}>
+                                    <div style={{
+                                        overflowX: 'auto',
+                                        maxHeight: '500px',
+                                        overflowY: 'auto'
+                                    }}>
+                                        <table style={{
+                                            width: '100%',
+                                            borderCollapse: 'collapse',
+                                            fontSize: '0.75rem'
+                                        }}>
+                                            <thead>
+                                                <tr style={{ background: '#003366', color: 'white' }}>
+                                                    <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>No</th>
+                                                    <th style={{ padding: '8px 6px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5, minWidth: '80px' }}>Provinsi</th>
+                                                    <th style={{ padding: '8px 6px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5, minWidth: '80px' }}>Wilayah</th>
+                                                    <th style={{ padding: '8px 6px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5, minWidth: '120px' }}>Nama Dermaga</th>
+                                                    <th style={{ padding: '8px 6px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5, minWidth: '100px' }}>Konstruksi</th>
+                                                    <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>P (m)</th>
+                                                    <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>L (m)</th>
+                                                    <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>Draft</th>
+                                                    <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>Pasut</th>
+                                                    <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>Kondisi</th>
+                                                    <th style={{ padding: '8px 6px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5, minWidth: '100px' }}>Sandar</th>
+                                                    <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>Plat MST</th>
+                                                    <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>Listrik</th>
+                                                    <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>Air</th>
+                                                    <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>BBM</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {previewData.map((item, index) => (
+                                                    <tr
+                                                        key={index}
+                                                        style={{
+                                                            background: index % 2 === 0 ? '#ffffff' : '#f8fafc',
+                                                            borderBottom: '1px solid #f1f5f9'
+                                                        }}
+                                                    >
+                                                        <td style={{ padding: '6px 6px', textAlign: 'center', color: '#64748b', fontSize: '0.7rem' }}>{index + 1}</td>
+                                                        <td style={{ padding: '6px 6px', color: '#475569', fontSize: '0.7rem' }}>{item.provinsi || '-'}</td>
+                                                        <td style={{ padding: '6px 6px', color: '#64748b', fontSize: '0.65rem' }}>{item.wilayah || '-'}</td>
+                                                        <td style={{ padding: '6px 6px', fontWeight: '600', color: '#003366', fontSize: '0.75rem' }}>{item.nama_dermaga || '-'}</td>
+                                                        <td style={{ padding: '6px 6px', color: '#334155', fontSize: '0.65rem' }}>{item.konstruksi || '-'}</td>
+                                                        <td style={{ padding: '6px 6px', textAlign: 'right', fontFamily: FONT_MONO, fontSize: '0.7rem' }}>{item.panjang_m || 0}</td>
+                                                        <td style={{ padding: '6px 6px', textAlign: 'right', fontFamily: FONT_MONO, fontSize: '0.7rem' }}>{item.lebar_m || 0}</td>
+                                                        <td style={{ padding: '6px 6px', textAlign: 'right', fontFamily: FONT_MONO, fontSize: '0.7rem' }}>{item.draft_lwl_m || 0}</td>
+                                                        <td style={{ padding: '6px 6px', textAlign: 'right', fontFamily: FONT_MONO, fontSize: '0.7rem' }}>{item.pasut_hwl_lwl_m || 0}</td>
+                                                        <td style={{ padding: '6px 6px', textAlign: 'center' }}>
+                                                            <span style={{
+                                                                padding: '2px 6px',
+                                                                borderRadius: '4px',
+                                                                fontSize: '0.65rem',
+                                                                fontWeight: '600',
+                                                                background: item.kondisi_percent > 70 ? '#dcfce7' : '#fef3c7',
+                                                                color: item.kondisi_percent > 70 ? '#15803d' : '#b45309'
+                                                            }}>
+                                                                {item.kondisi_percent || 0}%
+                                                            </span>
+                                                        </td>
+                                                        <td style={{ padding: '6px 6px', fontSize: '0.65rem', color: '#64748b' }}>
+                                                            {item.sandar_items?.length > 0 ? item.sandar_items.map(s => `${s.jumlah}x ${s.tipe} (${s.ton}t)`).join(', ') : '-'}
+                                                        </td>
+                                                        <td style={{ padding: '6px 6px', textAlign: 'right', fontFamily: FONT_MONO, fontSize: '0.7rem' }}>{item.kemampuan_plat_lantai_ton || item.plat_mst_ton || '-'}</td>
+                                                        <td style={{ padding: '6px 6px', textAlign: 'center', fontSize: '0.65rem' }}>
+                                                            {item.sumber_listrik || item.listrik_sumber || '-'}{item.daya_kva || item.listrik_daya_kva ? ` (${item.daya_kva || item.listrik_daya_kva}kVA)` : ''}
+                                                        </td>
+                                                        <td style={{ padding: '6px 6px', textAlign: 'center', fontSize: '0.65rem' }}>
+                                                            {item.sumber_air || item.air_sumber || '-'}{item.kapasitas_air_gwt_m3 || item.air_gwt_m3 ? ` (${item.kapasitas_air_gwt_m3 || item.air_gwt_m3}m³)` : ''}
+                                                        </td>
+                                                        <td style={{ padding: '6px 6px', textAlign: 'center', fontSize: '0.65rem' }}>{item.kapasitas_bbm || item.bbm || '-'}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                {/* Data Summary */}
+                                <div style={{ marginTop: '12px', padding: '12px', background: '#f8fafc', borderRadius: '6px', fontSize: '0.75rem', color: '#475569' }}>
+                                    <strong>📊 Ringkasan Data:</strong>
+                                    <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
+                                        <li>Total baris: <strong>{previewData.length}</strong></li>
+                                        <li>Dengan Sandar Items: <strong>{previewData.filter(d => d.sandar_items?.length > 0).length}</strong></li>
+                                        <li>Dengan Listrik: <strong>{previewData.filter(d => d.listrik_sumber).length}</strong></li>
+                                        <li>Dengan Air: <strong>{previewData.filter(d => d.air_sumber).length}</strong></li>
+                                        <li>Dengan BBM: <strong>{previewData.filter(d => d.bbm).length}</strong></li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     )
 }
 

@@ -236,9 +236,11 @@ function PetaFaslan() {
                 const resFaslabuh = await fetch(finalEndpointFaslabuh)
                 const dataFaslabuh = await resFaslabuh.json()
 
-                // Fetch Harkan from LocalStorage (Mock Backend)
-                const storedHarkan = localStorage.getItem('dataHarkan')
-                const dataHarkan = storedHarkan ? JSON.parse(storedHarkan) : []
+                // Fetch Harkan from API
+                const endpointHarkan = '/api/harkan'
+                const finalEndpointHarkan = import.meta.env.PROD ? endpointHarkan : `http://localhost:3001${endpointHarkan}`
+                const resHarkan = await fetch(finalEndpointHarkan)
+                const dataHarkan = await resHarkan.json()
                 const validHarkan = dataHarkan.filter(item => {
                     // Check if lat/lon exist and are valid numbers
                     const lat = parseFloat(item.latitude)
@@ -369,7 +371,7 @@ function PetaFaslan() {
                             width: '10px',
                             height: '10px',
                             borderRadius: '50%',
-                            background: faslabuhSettings.color
+                            background: HARKAN_NODE_COLOR
                         }}></div>
                         <span style={{ fontSize: '13px', color: '#64748b' }}>Harkan</span>
                         <span style={{ fontSize: '15px', fontWeight: '600', color: '#1e293b' }}>{assetsHarkan.length}</span>
@@ -680,16 +682,16 @@ function PetaFaslan() {
                             const lon = parseFloat(asset.longitude)
 
                             return (
-                                <Marker key={`harkan-${asset.id}`} position={[lat, lon]} icon={faslabuhIcon}>
+                                <Marker key={`harkan-${asset.id}`} position={[lat, lon]} icon={harkanIcon}>
                                     <Popup>
                                         <div style={{ minWidth: '220px' }}>
                                             <div style={{
                                                 fontSize: '14px',
                                                 fontWeight: '700',
-                                                color: faslabuhSettings.color,
+                                                color: HARKAN_NODE_COLOR,
                                                 marginBottom: '8px',
                                                 paddingBottom: '8px',
-                                                borderBottom: `2px solid ${faslabuhSettings.color}`
+                                                borderBottom: `2px solid ${HARKAN_NODE_COLOR}`
                                             }}>
                                                 🛳️ ASET HARKAN
                                             </div>

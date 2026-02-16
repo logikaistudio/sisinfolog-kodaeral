@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import * as XLSX from 'xlsx'
 
 // --- Helper Components ---
@@ -187,48 +187,27 @@ function DataHarkan() {
         fotos: [] // { name, url, type }
     }
 
-    const [items, setItems] = useState(() => {
-        const stored = localStorage.getItem('dataHarkan')
-        return stored ? JSON.parse(stored) : [
-            {
-                id: 1,
-                // ...initialFormState, // Spread default first
-                unsur: 'KRI',
-                nama: 'KRI Teluk Banten',
-                bahan: 'Baja',
-                panjang_max_loa: 100,
-                kondisi: 'Siap',
-                status: 'Operasi',
-                persentasi: 85,
-                latitude: '-6.120000',
-                longitude: '106.870000',
-                sertifikasi: [
-                    { nama: 'Sertifikat Kelaikan', nomor: '123/KL/2025', berlaku: '2026-12-31', catatan: 'Perlu perpanjangan' }
-                ],
-                pesawat: [
-                    {
-                        nama_group: 'Mesin Utama',
-                        items: [
-                            { nama_item: 'Piston Ring' },
-                            { nama_item: 'Cylinder Head' }
-                        ]
-                    },
-                    {
-                        nama_group: 'Generator',
-                        items: [
-                            { nama_item: 'AVR' }
-                        ]
-                    }
-                ],
-                fotos: []
-            }
-        ]
-    })
+    const [items, setItems] = useState([])
+    const [loading, setLoading] = useState(true)
 
-    // Persist to localStorage whenever items change
-    React.useEffect(() => {
-        localStorage.setItem('dataHarkan', JSON.stringify(items))
-    }, [items])
+    // Fetch data from API on mount
+    useEffect(() => {
+        fetchData()
+    }, [])
+
+    const fetchData = async () => {
+        try {
+            const endpoint = '/api/harkan'
+            const finalEndpoint = import.meta.env.PROD ? endpoint : `http://localhost:3001${endpoint}`
+            const response = await fetch(finalEndpoint)
+            const data = await response.json()
+            setItems(data)
+            setLoading(false)
+        } catch (error) {
+            console.error('Error fetching harkan data:', error)
+            setLoading(false)
+        }
+    }
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [currentItem, setCurrentItem] = useState(null)
     const [activeTab, setActiveTab] = useState('general')
@@ -359,20 +338,63 @@ function DataHarkan() {
         setFormData(prev => ({ ...prev, fotos: newPhotos }))
     }
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault()
-        if (currentItem) {
-            setItems(prev => prev.map(item => item.id === currentItem.id ? { ...formData, id: item.id } : item))
-        } else {
-            setItems(prev => [...prev, { ...formData, id: Date.now() }])
+        try {
+            const endpoint = '/api/harkan'
+            const finalEndpoint = import.meta.env.PROD ? endpoint : `http://localhost:3001${endpoint}`
+
+            if (currentItem) {
+                // Update existing
+                const response = await fetch(`${finalEndpoint}/${currentItem.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                })
+                if (response.ok) {
+                    await fetchData()
+                    handleCloseModal()
+                } else {
+                    alert('Gagal mengupdate data')
+                }
+            } else {
+                // Create new
+                const response = await fetch(finalEndpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                })
+                if (response.ok) {
+                    await fetchData()
+                    handleCloseModal()
+                } else {
+                    alert('Gagal menambah data')
+                }
+            }
+        } catch (error) {
+            console.error('Error saving data:', error)
+            alert('Terjadi kesalahan saat menyimpan data')
         }
-        handleCloseModal()
     }
 
-    const handleDelete = () => {
+    const handleDelete = async () => {
         if (currentItem && window.confirm('Apakah Anda yakin ingin menghapus data ini?')) {
-            setItems(prev => prev.filter(item => item.id !== currentItem.id))
-            handleCloseModal()
+            try {
+                const endpoint = '/api/harkan'
+                const finalEndpoint = import.meta.env.PROD ? endpoint : `http://localhost:3001${endpoint}`
+                const response = await fetch(`${finalEndpoint}/${currentItem.id}`, {
+                    method: 'DELETE'
+                })
+                if (response.ok) {
+                    await fetchData()
+                    handleCloseModal()
+                } else {
+                    alert('Gagal menghapus data')
+                }
+            } catch (error) {
+                console.error('Error deleting data:', error)
+                alert('Terjadi kesalahan saat menghapus data')
+            }
         }
     }
 

@@ -3,7 +3,7 @@ import { useState } from 'react'
 
 function Sidebar({ currentPage, setCurrentPage, collapsed, setCollapsed, mobileOpen, setMobileOpen, onLogout, user }) {
     // State untuk menyimpan ID menu yang sedang expanded (bisa multiple levels)
-    const [expandedMenus, setExpandedMenus] = useState(['faslan', 'fastanah-parent', 'faslan-rumneg-parent'])
+    const [expandedMenus, setExpandedMenus] = useState(['faslan', 'fastanah-parent', 'faslan-rumneg-parent', 'satharkan'])
 
     const menuItems = [
         {
@@ -53,7 +53,10 @@ function Sidebar({ currentPage, setCurrentPage, collapsed, setCollapsed, mobileO
             id: 'satharkan',
             label: 'Satharkan',
             icon: '🏗️',
-            description: 'Satuan Pemeliharaan Pangkalan'
+            description: 'Satuan Pemeliharaan Pangkalan',
+            children: [
+                { id: 'data-harkan', label: 'Data Harkan', icon: '📝' }
+            ]
         },
         {
             id: 'diskes',

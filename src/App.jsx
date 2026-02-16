@@ -12,6 +12,7 @@ import Faslabuh from './pages/Faslabuh'
 import Kerjasama from './pages/Kerjasama'
 import IndustriJasaMaritim from './pages/IndustriJasaMaritim'
 import Satharkan from './pages/Satharkan'
+import DataHarkan from './pages/DataHarkan'
 import MasterData from './pages/MasterData'
 import MasterAsset from './pages/MasterAsset'
 import MasterAssetList from './pages/MasterAssetList'
@@ -108,6 +109,8 @@ function App() {
         return <IndustriJasaMaritim />
       case 'satharkan':
         return <Satharkan />
+      case 'data-harkan':
+        return <DataHarkan />
       case 'masterdata':
         return <MasterData />
       case 'master-asset':

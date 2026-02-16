@@ -1550,7 +1550,7 @@ app.get('/api/faslabuh', async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT * FROM faslabuh
-            ORDER BY created_at DESC
+            ORDER BY provinsi ASC NULLS LAST, created_at DESC
         `);
         res.json(result.rows);
     } catch (err) {
@@ -1583,10 +1583,26 @@ app.post('/api/faslabuh', async (req, res) => {
         // Map frontend fields to database columns with null safety
         const data = req.body;
 
-        const values = [
+        const result = await pool.query(`
+            INSERT INTO faslabuh (
+                provinsi, wilayah, lokasi, alamat, nama_dermaga, konstruksi, lon, lat,
+                kode_barang, no_sertifikat, tgl_sertifikat,
+                panjang, lebar, luas, draft_lwl, pasut_hwl_lwl, kondisi,
+                sandar_items, plat_mst_ton, plat_jenis_ranmor, plat_berat_max_ton,
+                listrik_jml_titik, listrik_kap_amp, listrik_tegangan_volt, listrik_frek_hz,
+                listrik_sumber, listrik_daya_kva,
+                air_gwt_m3, air_debit_m3_jam, air_sumber,
+                bbm, hydrant, keterangan, fotos
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+                $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+                $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33
+            ) RETURNING *
+        `, [
             data.provinsi || null,
             data.wilayah || null,
             data.lokasi || null,
+            data.alamat || null,
             data.nama_dermaga || null,
             data.konstruksi || null,
             data.lon || null,
@@ -1628,24 +1644,7 @@ app.post('/api/faslabuh', async (req, res) => {
 
             data.keterangan || null,
             JSON.stringify(data.fotos || [])
-        ];
-
-        const result = await pool.query(`
-            INSERT INTO faslabuh (
-                provinsi, wilayah, lokasi, nama_dermaga, konstruksi, lon, lat,
-                kode_barang, no_sertifikat, tgl_sertifikat,
-                panjang, lebar, luas, draft_lwl, pasut_hwl_lwl, kondisi,
-                sandar_items, plat_mst_ton, plat_jenis_ranmor, plat_berat_max_ton,
-                listrik_jml_titik, listrik_kap_amp, listrik_tegangan_volt, listrik_frek_hz,
-                listrik_sumber, listrik_daya_kva,
-                air_gwt_m3, air_debit_m3_jam, air_sumber,
-                bbm, hydrant, keterangan, fotos
-            ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-                $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-                $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32
-            ) RETURNING *
-        `, values);
+        ]);
 
         res.json(result.rows[0]);
     } catch (err) {
@@ -1662,18 +1661,19 @@ app.put('/api/faslabuh/:id', async (req, res) => {
         const data = req.body;
 
         const values = [
-            data.provinsi || null,
-            data.wilayah || null,
-            data.lokasi || null,
-            data.nama_dermaga || null,
-            data.konstruksi || null,
-            data.lon || null,
-            data.lat || null,
-            data.kode_barang || null,
-            data.no_sertifikat || null,
-            data.tgl_sertifikat || null,
+            data.provinsi || null, // $1
+            data.wilayah || null, // $2
+            data.lokasi || null, // $3
+            data.alamat || null, // $4
+            data.nama_dermaga || null, // $5
+            data.konstruksi || null, // $6
+            data.lon || null, // $7
+            data.lat || null, // $8
+            data.kode_barang || null, // $9
+            data.no_sertifikat || null, // $10
+            data.tgl_sertifikat || null, // $11
 
-            // Dimensions
+            // Dimensions - $12 to $17
             data.panjang || data.panjang_m || null,
             data.lebar || data.lebar_m || null,
             data.luas || data.luas_m2 || null,
@@ -1681,15 +1681,20 @@ app.put('/api/faslabuh/:id', async (req, res) => {
             data.pasut_hwl_lwl || data.pasut_hwl_lwl_m || null,
             data.kondisi || data.kondisi_percent || null,
 
-            // JSON fields
-            JSON.stringify(data.sandar_items || []),
+            // Sandar Items (JSON) - Construct from flat fields - $18
+            JSON.stringify([{
+                displacement_kri: data.displacement_kri,
+                berat_sandar_maks_ton: data.berat_sandar_maks_ton,
+                tipe_kapal: data.tipe_kapal,
+                jumlah_maks: data.jumlah_maks
+            }]),
 
-            // Technical specs
+            // Tech Specs - $19 to $21
             data.plat_mst_ton || data.kemampuan_plat_lantai_ton || null,
             data.plat_jenis_ranmor || data.jenis_ranmor || null,
             data.plat_berat_max_ton || data.berat_ranmor_ton || null,
 
-            // Electrical
+            // Electrical - $22 to $27
             data.listrik_jml_titik || data.titik_sambung_listrik || null,
             data.listrik_kap_amp || data.kapasitas_a || null,
             data.listrik_tegangan_volt || data.tegangan_v || null,
@@ -1697,32 +1702,32 @@ app.put('/api/faslabuh/:id', async (req, res) => {
             data.listrik_sumber || data.sumber_listrik || null,
             data.listrik_daya_kva || data.daya_kva || null,
 
-            // Water & Fuel
+            // Water & Fuel - $28 to $32
             data.air_gwt_m3 || data.kapasitas_air_gwt_m3 || null,
             data.air_debit_m3_jam || data.debit_air_m3_jam || null,
             data.air_sumber || data.sumber_air || null,
             data.bbm || data.kapasitas_bbm || null,
-            data.hydrant || null,
+            data.hydrant || null, // Check frontend key if different
 
-            data.keterangan || null,
-            JSON.stringify(data.fotos || []),
-            id
+            data.keterangan || null, // $33
+            JSON.stringify(data.fotos || []), // $34
+            id // $35
         ];
 
         const result = await pool.query(`
             UPDATE faslabuh SET
-                provinsi = $1, wilayah = $2, lokasi = $3, nama_dermaga = $4, konstruksi = $5, lon = $6, lat = $7,
-                kode_barang = $8, no_sertifikat = $9, tgl_sertifikat = $10,
-                panjang = $11, lebar = $12, luas = $13, draft_lwl = $14, pasut_hwl_lwl = $15, kondisi = $16,
-                sandar_items = $17, plat_mst_ton = $18, plat_jenis_ranmor = $19, plat_berat_max_ton = $20,
-                listrik_jml_titik = $21, listrik_kap_amp = $22, listrik_tegangan_volt = $23, listrik_frek_hz = $24,
-                listrik_sumber = $25, listrik_daya_kva = $26,
-                air_gwt_m3 = $27, air_debit_m3_jam = $28, air_sumber = $29,
-                bbm = $30, hydrant = $31, keterangan = $32, fotos = $33,
-                updated_at = NOW()
-            WHERE id = $34
-            RETURNING *
-        `, values);
+        provinsi = $1, wilayah = $2, lokasi = $3, alamat = $4, nama_dermaga = $5, konstruksi = $6, lon = $7, lat = $8,
+            kode_barang = $9, no_sertifikat = $10, tgl_sertifikat = $11,
+            panjang = $12, lebar = $13, luas = $14, draft_lwl = $15, pasut_hwl_lwl = $16, kondisi = $17,
+            sandar_items = $18, plat_mst_ton = $19, plat_jenis_ranmor = $20, plat_berat_max_ton = $21,
+            listrik_jml_titik = $22, listrik_kap_amp = $23, listrik_tegangan_volt = $24, listrik_frek_hz = $25,
+            listrik_sumber = $26, listrik_daya_kva = $27,
+            air_gwt_m3 = $28, air_debit_m3_jam = $29, air_sumber = $30,
+            bbm = $31, hydrant = $32, keterangan = $33, fotos = $34,
+            updated_at = NOW()
+            WHERE id = $35
+        RETURNING *
+            `, values);
 
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Dermaga not found' });
@@ -1730,6 +1735,19 @@ app.put('/api/faslabuh/:id', async (req, res) => {
         res.json(result.rows[0]);
     } catch (err) {
         console.error('Error updating faslabuh:', err);
+        res.status(500).json({ error: 'Internal server error', details: err.message });
+    }
+});
+
+// Delete All Faslabuh
+app.delete('/api/faslabuh/delete-all', async (req, res) => {
+    try {
+        console.log('Attempting to delete all faslabuh data...');
+        const result = await pool.query('DELETE FROM faslabuh');
+        console.log('Deleted rows:', result.rowCount);
+        res.json({ message: 'All faslabuh data deleted successfully', count: result.rowCount });
+    } catch (err) {
+        console.error('Error deleting all faslabuh:', err);
         res.status(500).json({ error: 'Internal server error', details: err.message });
     }
 });
@@ -1757,7 +1775,7 @@ app.post('/api/faslabuh/bulk-import', async (req, res) => {
         return res.status(400).json({ error: 'Data array is required' });
     }
 
-    console.log(`[FASLABUH IMPORT] Starting: ${importData.length} records, mode=${mode}`);
+    console.log(`[FASLABUH IMPORT]Starting: ${importData.length} records, mode = ${mode} `);
     const startTime = Date.now();
 
     const results = {
@@ -1779,6 +1797,7 @@ app.post('/api/faslabuh/bulk-import', async (req, res) => {
                     provinsi: item.provinsi || null,
                     wilayah: item.wilayah || null,
                     lokasi: item.lokasi || null,
+                    alamat: item.alamat || null,
                     nama_dermaga: item.nama_dermaga || null,
                     konstruksi: item.konstruksi || null,
                     lon: item.lon || null,
@@ -1828,21 +1847,21 @@ app.post('/api/faslabuh/bulk-import', async (req, res) => {
                         // Update existing
                         await pool.query(`
                             UPDATE faslabuh SET
-                                provinsi = $1, wilayah = $2, lokasi = $3, konstruksi = $4, lon = $5, lat = $6,
-                                kode_barang = $7, no_sertifikat = $8, tgl_sertifikat = $9,
-                                panjang = $10, lebar = $11, luas = $12, draft_lwl = $13, 
-                                pasut_hwl_lwl = $14, kondisi = $15,
-                                sandar_items = $16, plat_mst_ton = $17, plat_jenis_ranmor = $18, 
-                                plat_berat_max_ton = $19,
-                                listrik_jml_titik = $20, listrik_kap_amp = $21, 
-                                listrik_tegangan_volt = $22, listrik_frek_hz = $23,
-                                listrik_sumber = $24, listrik_daya_kva = $25,
-                                air_gwt_m3 = $26, air_debit_m3_jam = $27, air_sumber = $28,
-                                bbm = $29, hydrant = $30, keterangan = $31,
-                                updated_at = NOW()
-                            WHERE id = $32
-                        `, [
-                            itemData.provinsi, itemData.wilayah, itemData.lokasi, itemData.konstruksi, itemData.lon, itemData.lat,
+        provinsi = $1, wilayah = $2, lokasi = $3, alamat = $4, konstruksi = $5, lon = $6, lat = $7,
+            kode_barang = $8, no_sertifikat = $9, tgl_sertifikat = $10,
+            panjang = $11, lebar = $12, luas = $13, draft_lwl = $14,
+            pasut_hwl_lwl = $15, kondisi = $16,
+            sandar_items = $17, plat_mst_ton = $18, plat_jenis_ranmor = $19,
+            plat_berat_max_ton = $20,
+            listrik_jml_titik = $21, listrik_kap_amp = $22,
+            listrik_tegangan_volt = $23, listrik_frek_hz = $24,
+            listrik_sumber = $25, listrik_daya_kva = $26,
+            air_gwt_m3 = $27, air_debit_m3_jam = $28, air_sumber = $29,
+            bbm = $30, hydrant = $31, keterangan = $32,
+            updated_at = NOW()
+                            WHERE id = $33
+            `, [
+                            itemData.provinsi, itemData.wilayah, itemData.lokasi, itemData.alamat, itemData.konstruksi, itemData.lon, itemData.lat,
                             itemData.kode_barang, itemData.no_sertifikat, itemData.tgl_sertifikat,
                             itemData.panjang, itemData.lebar, itemData.luas, itemData.draft_lwl,
                             itemData.pasut_hwl_lwl, itemData.kondisi,
@@ -1859,22 +1878,22 @@ app.post('/api/faslabuh/bulk-import', async (req, res) => {
                     } else {
                         // Insert new
                         await pool.query(`
-                            INSERT INTO faslabuh (
-                                provinsi, wilayah, lokasi, nama_dermaga, konstruksi, lon, lat,
-                                kode_barang, no_sertifikat, tgl_sertifikat,
-                                panjang, lebar, luas, draft_lwl, pasut_hwl_lwl, kondisi,
-                                sandar_items, plat_mst_ton, plat_jenis_ranmor, plat_berat_max_ton,
-                                listrik_jml_titik, listrik_kap_amp, listrik_tegangan_volt, 
-                                listrik_frek_hz, listrik_sumber, listrik_daya_kva,
-                                air_gwt_m3, air_debit_m3_jam, air_sumber,
-                                bbm, hydrant, keterangan
-                            ) VALUES (
-                                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-                                $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-                                $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31
-                            )
-                        `, [
-                            itemData.provinsi, itemData.wilayah, itemData.lokasi, itemData.nama_dermaga, itemData.konstruksi,
+                            INSERT INTO faslabuh(
+                provinsi, wilayah, lokasi, alamat, nama_dermaga, konstruksi, lon, lat,
+                kode_barang, no_sertifikat, tgl_sertifikat,
+                panjang, lebar, luas, draft_lwl, pasut_hwl_lwl, kondisi,
+                sandar_items, plat_mst_ton, plat_jenis_ranmor, plat_berat_max_ton,
+                listrik_jml_titik, listrik_kap_amp, listrik_tegangan_volt,
+                listrik_frek_hz, listrik_sumber, listrik_daya_kva,
+                air_gwt_m3, air_debit_m3_jam, air_sumber,
+                bbm, hydrant, keterangan
+            ) VALUES(
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+                $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+                $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33
+            )
+                `, [
+                            itemData.provinsi, itemData.wilayah, itemData.lokasi, itemData.alamat, itemData.nama_dermaga, itemData.konstruksi,
                             itemData.lon, itemData.lat,
                             itemData.kode_barang, itemData.no_sertifikat, itemData.tgl_sertifikat,
                             itemData.panjang, itemData.lebar, itemData.luas,
@@ -1892,22 +1911,22 @@ app.post('/api/faslabuh/bulk-import', async (req, res) => {
                 } else if (mode === 'insert-only') {
                     // Insert new
                     await pool.query(`
-                        INSERT INTO faslabuh (
-                            provinsi, wilayah, lokasi, nama_dermaga, konstruksi, lon, lat,
-                            kode_barang, no_sertifikat, tgl_sertifikat,
-                            panjang, lebar, luas, draft_lwl, pasut_hwl_lwl, kondisi,
-                            sandar_items, plat_mst_ton, plat_jenis_ranmor, plat_berat_max_ton,
-                            listrik_jml_titik, listrik_kap_amp, listrik_tegangan_volt, 
-                            listrik_frek_hz, listrik_sumber, listrik_daya_kva,
-                            air_gwt_m3, air_debit_m3_jam, air_sumber,
-                            bbm, hydrant, keterangan
-                        ) VALUES (
-                            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-                            $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-                            $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31
-                        )
+                        INSERT INTO faslabuh(
+                    provinsi, wilayah, lokasi, alamat, nama_dermaga, konstruksi, lon, lat,
+                    kode_barang, no_sertifikat, tgl_sertifikat,
+                    panjang, lebar, luas, draft_lwl, pasut_hwl_lwl, kondisi,
+                    sandar_items, plat_mst_ton, plat_jenis_ranmor, plat_berat_max_ton,
+                    listrik_jml_titik, listrik_kap_amp, listrik_tegangan_volt,
+                    listrik_frek_hz, listrik_sumber, listrik_daya_kva,
+                    air_gwt_m3, air_debit_m3_jam, air_sumber,
+                    bbm, hydrant, keterangan
+                ) VALUES(
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+                    $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+                    $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33
+                )
                     `, [
-                        itemData.provinsi, itemData.wilayah, itemData.lokasi, itemData.nama_dermaga, itemData.konstruksi,
+                        itemData.provinsi, itemData.wilayah, itemData.lokasi, itemData.alamat, itemData.nama_dermaga, itemData.konstruksi,
                         itemData.lon, itemData.lat,
                         itemData.kode_barang, itemData.no_sertifikat, itemData.tgl_sertifikat,
                         itemData.panjang, itemData.lebar, itemData.luas,
@@ -1925,21 +1944,21 @@ app.post('/api/faslabuh/bulk-import', async (req, res) => {
                     // Update only - skip if not exists
                     const updateResult = await pool.query(`
                         UPDATE faslabuh SET
-                            provinsi = $1, wilayah = $2, lokasi = $3, konstruksi = $4, lon = $5, lat = $6,
-                            kode_barang = $7, no_sertifikat = $8, tgl_sertifikat = $9,
-                            panjang = $10, lebar = $11, luas = $12, draft_lwl = $13, 
-                            pasut_hwl_lwl = $14, kondisi = $15,
-                            sandar_items = $16, plat_mst_ton = $17, plat_jenis_ranmor = $18, 
-                            plat_berat_max_ton = $19,
-                            listrik_jml_titik = $20, listrik_kap_amp = $21, 
-                            listrik_tegangan_volt = $22, listrik_frek_hz = $23,
-                            listrik_sumber = $24, listrik_daya_kva = $25,
-                            air_gwt_m3 = $26, air_debit_m3_jam = $27, air_sumber = $28,
-                            bbm = $29, hydrant = $30, keterangan = $31,
-                            updated_at = NOW()
-                        WHERE nama_dermaga = $32
-                    `, [
-                        itemData.provinsi, itemData.wilayah, itemData.lokasi, itemData.konstruksi, itemData.lon, itemData.lat,
+        provinsi = $1, wilayah = $2, lokasi = $3, alamat = $4, konstruksi = $5, lon = $6, lat = $7,
+            kode_barang = $8, no_sertifikat = $9, tgl_sertifikat = $10,
+            panjang = $11, lebar = $12, luas = $13, draft_lwl = $14,
+            pasut_hwl_lwl = $15, kondisi = $16,
+            sandar_items = $17, plat_mst_ton = $18, plat_jenis_ranmor = $19,
+            plat_berat_max_ton = $20,
+            listrik_jml_titik = $21, listrik_kap_amp = $22,
+            listrik_tegangan_volt = $23, listrik_frek_hz = $24,
+            listrik_sumber = $25, listrik_daya_kva = $26,
+            air_gwt_m3 = $27, air_debit_m3_jam = $28, air_sumber = $29,
+            bbm = $30, hydrant = $31, keterangan = $32,
+            updated_at = NOW()
+                        WHERE nama_dermaga = $33
+            `, [
+                        itemData.provinsi, itemData.wilayah, itemData.lokasi, itemData.alamat, itemData.konstruksi, itemData.lon, itemData.lat,
                         itemData.kode_barang, itemData.no_sertifikat, itemData.tgl_sertifikat,
                         itemData.panjang, itemData.lebar, itemData.luas, itemData.draft_lwl,
                         itemData.pasut_hwl_lwl, itemData.kondisi,
@@ -1977,13 +1996,13 @@ app.post('/api/faslabuh/bulk-import', async (req, res) => {
         }
 
         const elapsed = Date.now() - startTime;
-        console.log(`[FASLABUH IMPORT] Done in ${elapsed}ms: inserted=${results.inserted}, updated=${results.updated}, failed=${results.failed}`);
+        console.log(`[FASLABUH IMPORT]Done in ${elapsed} ms: inserted = ${results.inserted}, updated = ${results.updated}, failed = ${results.failed} `);
 
         if (results.failed > 10) {
             results.errors.push({
                 row: '-',
                 nama_dermaga: '-',
-                error: `... dan ${results.failed - 10} error lainnya`
+                error: `...dan ${results.failed - 10} error lainnya`
             });
         }
 
@@ -1994,16 +2013,7 @@ app.post('/api/faslabuh/bulk-import', async (req, res) => {
     }
 });
 
-// Delete All Faslabuh
-app.delete('/api/faslabuh/delete-all', async (req, res) => {
-    try {
-        await pool.query('TRUNCATE TABLE faslabuh RESTART IDENTITY');
-        res.json({ message: 'All faslabuh data deleted successfully' });
-    } catch (err) {
-        console.error('Error deleting all faslabuh:', err);
-        res.status(500).json({ error: 'Internal server error', details: err.message });
-    }
-});
+
 
 // ==================== END FASLABUH ENDPOINTS ====================
 
@@ -2019,29 +2029,29 @@ app.get('/api/assets/rumneg', async (req, res) => {
         if (err.code === '42P01') {
             try {
                 await pool.query(`
-                    CREATE TABLE IF NOT EXISTS assets_rumneg (
-                        id SERIAL PRIMARY KEY,
-                        occupant_name VARCHAR(255),
-                        occupant_rank VARCHAR(100),
-                        occupant_nrp VARCHAR(100),
-                        area VARCHAR(100),
-                        alamat_detail TEXT,
-                        longitude VARCHAR(50),
-                        latitude VARCHAR(50),
-                        status_penghuni VARCHAR(50),
-                        no_sip VARCHAR(100),
-                        tgl_sip VARCHAR(50),
-                        tipe_rumah VARCHAR(50),
-                        golongan VARCHAR(50),
-                        tahun_buat VARCHAR(50),
-                        asal_perolehan VARCHAR(100),
-                        mendapat_fasdin VARCHAR(50),
-                        kondisi VARCHAR(50),
-                        keterangan TEXT,
-                        created_at TIMESTAMP DEFAULT NOW(),
-                        updated_at TIMESTAMP DEFAULT NOW()
-                    );
-                `);
+                    CREATE TABLE IF NOT EXISTS assets_rumneg(
+                id SERIAL PRIMARY KEY,
+                occupant_name VARCHAR(255),
+                occupant_rank VARCHAR(100),
+                occupant_nrp VARCHAR(100),
+                area VARCHAR(100),
+                alamat_detail TEXT,
+                longitude VARCHAR(50),
+                latitude VARCHAR(50),
+                status_penghuni VARCHAR(50),
+                no_sip VARCHAR(100),
+                tgl_sip VARCHAR(50),
+                tipe_rumah VARCHAR(50),
+                golongan VARCHAR(50),
+                tahun_buat VARCHAR(50),
+                asal_perolehan VARCHAR(100),
+                mendapat_fasdin VARCHAR(50),
+                kondisi VARCHAR(50),
+                keterangan TEXT,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            );
+`);
                 res.json([]);
             } catch (e) { console.error(e); res.status(500).json({ error: 'DB Error' }); }
         } else {
@@ -2064,38 +2074,38 @@ app.post('/api/assets/rumneg/bulk', async (req, res) => {
 
         // Ensure table exists
         await client.query(`
-            CREATE TABLE IF NOT EXISTS assets_rumneg (
-                id SERIAL PRIMARY KEY,
-                occupant_name VARCHAR(255),
-                occupant_rank VARCHAR(100),
-                occupant_nrp VARCHAR(100),
-                area VARCHAR(100),
-                alamat_detail TEXT,
-                longitude VARCHAR(50),
-                latitude VARCHAR(50),
-                status_penghuni VARCHAR(50),
-                no_sip VARCHAR(100),
-                tgl_sip VARCHAR(50),
-                tipe_rumah VARCHAR(50),
-                golongan VARCHAR(50),
-                tahun_buat VARCHAR(50),
-                asal_perolehan VARCHAR(100),
-                mendapat_fasdin VARCHAR(50),
-                kondisi VARCHAR(50),
-                keterangan TEXT,
-                created_at TIMESTAMP DEFAULT NOW(),
-                updated_at TIMESTAMP DEFAULT NOW()
-            );
-        `);
+            CREATE TABLE IF NOT EXISTS assets_rumneg(
+    id SERIAL PRIMARY KEY,
+    occupant_name VARCHAR(255),
+    occupant_rank VARCHAR(100),
+    occupant_nrp VARCHAR(100),
+    area VARCHAR(100),
+    alamat_detail TEXT,
+    longitude VARCHAR(50),
+    latitude VARCHAR(50),
+    status_penghuni VARCHAR(50),
+    no_sip VARCHAR(100),
+    tgl_sip VARCHAR(50),
+    tipe_rumah VARCHAR(50),
+    golongan VARCHAR(50),
+    tahun_buat VARCHAR(50),
+    asal_perolehan VARCHAR(100),
+    mendapat_fasdin VARCHAR(50),
+    kondisi VARCHAR(50),
+    keterangan TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+`);
 
         for (const item of items) {
             await client.query(
-                `INSERT INTO assets_rumneg (
-                    occupant_name, occupant_rank, occupant_nrp, area, alamat_detail,
-                    longitude, latitude, status_penghuni, no_sip, tgl_sip,
-                    tipe_rumah, golongan, tahun_buat, asal_perolehan, mendapat_fasdin,
-                    kondisi, keterangan
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+                `INSERT INTO assets_rumneg(
+    occupant_name, occupant_rank, occupant_nrp, area, alamat_detail,
+    longitude, latitude, status_penghuni, no_sip, tgl_sip,
+    tipe_rumah, golongan, tahun_buat, asal_perolehan, mendapat_fasdin,
+    kondisi, keterangan
+) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
                 [
                     item.occupant_name, item.occupant_rank, item.occupant_nrp, item.area, item.alamat_detail,
                     item.longitude, item.latitude, item.status_penghuni, item.no_sip, item.tgl_sip,
@@ -2128,11 +2138,11 @@ app.put('/api/assets/rumneg/:id', async (req, res) => {
     try {
         const result = await pool.query(
             `UPDATE assets_rumneg SET
-                occupant_name=$1, occupant_rank=$2, occupant_nrp=$3, area=$4, alamat_detail=$5,
-                longitude=$6, latitude=$7, status_penghuni=$8, no_sip=$9, tgl_sip=$10,
-                tipe_rumah=$11, golongan=$12, tahun_buat=$13, asal_perolehan=$14, mendapat_fasdin=$15,
-                kondisi=$16, keterangan=$17, updated_at=NOW()
-             WHERE id=$18 RETURNING *`,
+occupant_name = $1, occupant_rank = $2, occupant_nrp = $3, area = $4, alamat_detail = $5,
+    longitude = $6, latitude = $7, status_penghuni = $8, no_sip = $9, tgl_sip = $10,
+    tipe_rumah = $11, golongan = $12, tahun_buat = $13, asal_perolehan = $14, mendapat_fasdin = $15,
+    kondisi = $16, keterangan = $17, updated_at = NOW()
+             WHERE id = $18 RETURNING * `,
             [
                 occupant_name, occupant_rank, occupant_nrp, area, alamat_detail,
                 longitude, latitude, status_penghuni, no_sip, tgl_sip,
@@ -2175,6 +2185,163 @@ app.delete('/api/assets/rumneg/all', async (req, res) => {
 
 // ==================== END RUMNEG ENDPOINTS ====================
 
+// ==================== DATA HARKAN ENDPOINTS ====================
+
+// Get All Harkan
+app.get('/api/harkan', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT * FROM data_harkan
+            ORDER BY created_at DESC
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        // Auto-create table if missing
+        if (err.code === '42P01') {
+            try {
+                await pool.query(`
+                    CREATE TABLE IF NOT EXISTS data_harkan (
+                        id SERIAL PRIMARY KEY,
+                        unsur VARCHAR(50),
+                        nama VARCHAR(255),
+                        bahan VARCHAR(100),
+                        panjang_max_loa NUMERIC,
+                        panjang NUMERIC,
+                        panjang_lwl NUMERIC,
+                        lebar_max NUMERIC,
+                        lebar_garis_air NUMERIC,
+                        tinggi_max NUMERIC,
+                        draft_max NUMERIC,
+                        dwt NUMERIC,
+                        merk_mesin VARCHAR(100),
+                        type_mesin VARCHAR(100),
+                        latitude VARCHAR(50),
+                        longitude VARCHAR(50),
+                        bb VARCHAR(100),
+                        tahun_pembuatan INTEGER,
+                        tahun_operasi INTEGER,
+                        status_kelaikan VARCHAR(50),
+                        sertifikasi JSONB,
+                        pesawat JSONB,
+                        kondisi VARCHAR(50),
+                        status VARCHAR(50),
+                        status_pemeliharaan TEXT,
+                        persentasi NUMERIC,
+                        permasalahan_teknis TEXT,
+                        tds VARCHAR(100),
+                        keterangan TEXT,
+                        fotos JSONB,
+                        created_at TIMESTAMP DEFAULT NOW(),
+                        updated_at TIMESTAMP DEFAULT NOW()
+                    )
+                `);
+                res.json([]);
+            } catch (e) {
+                console.error(e);
+                res.status(500).json({ error: 'DB Error' });
+            }
+        } else {
+            console.error('Error fetching harkan:', err);
+            res.status(500).json({ error: 'Internal server error', details: err.message });
+        }
+    }
+});
+
+// Get Single Harkan
+app.get('/api/harkan/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query('SELECT * FROM data_harkan WHERE id = $1', [id]);
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Data not found' });
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Create Harkan
+app.post('/api/harkan', async (req, res) => {
+    const data = req.body;
+    try {
+        const result = await pool.query(`
+            INSERT INTO data_harkan (
+                unsur, nama, bahan, panjang_max_loa, panjang, panjang_lwl,
+                lebar_max, lebar_garis_air, tinggi_max, draft_max, dwt,
+                merk_mesin, type_mesin, latitude, longitude,
+                bb, tahun_pembuatan, tahun_operasi, status_kelaikan,
+                sertifikasi, pesawat, kondisi, status, status_pemeliharaan,
+                persentasi, permasalahan_teknis, tds, keterangan, fotos
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+                $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29
+            ) RETURNING *
+        `, [
+            data.unsur, data.nama, data.bahan, data.panjang_max_loa, data.panjang, data.panjang_lwl,
+            data.lebar_max, data.lebar_garis_air, data.tinggi_max, data.draft_max, data.dwt,
+            data.merk_mesin, data.type_mesin, data.latitude, data.longitude,
+            data.bb, data.tahun_pembuatan, data.tahun_operasi, data.status_kelaikan,
+            JSON.stringify(data.sertifikasi || []), JSON.stringify(data.pesawat || []),
+            data.kondisi, data.status, data.status_pemeliharaan,
+            data.persentasi, data.permasalahan_teknis, data.tds, data.keterangan,
+            JSON.stringify(data.fotos || [])
+        ]);
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('Error creating harkan:', err);
+        res.status(500).json({ error: 'Internal server error', details: err.message });
+    }
+});
+
+// Update Harkan
+app.put('/api/harkan/:id', async (req, res) => {
+    const { id } = req.params;
+    const data = req.body;
+    try {
+        const result = await pool.query(`
+            UPDATE data_harkan SET
+                unsur = $1, nama = $2, bahan = $3, panjang_max_loa = $4, panjang = $5, panjang_lwl = $6,
+                lebar_max = $7, lebar_garis_air = $8, tinggi_max = $9, draft_max = $10, dwt = $11,
+                merk_mesin = $12, type_mesin = $13, latitude = $14, longitude = $15,
+                bb = $16, tahun_pembuatan = $17, tahun_operasi = $18, status_kelaikan = $19,
+                sertifikasi = $20, pesawat = $21, kondisi = $22, status = $23, status_pemeliharaan = $24,
+                persentasi = $25, permasalahan_teknis = $26, tds = $27, keterangan = $28, fotos = $29,
+                updated_at = NOW()
+            WHERE id = $30
+            RETURNING *
+        `, [
+            data.unsur, data.nama, data.bahan, data.panjang_max_loa, data.panjang, data.panjang_lwl,
+            data.lebar_max, data.lebar_garis_air, data.tinggi_max, data.draft_max, data.dwt,
+            data.merk_mesin, data.type_mesin, data.latitude, data.longitude,
+            data.bb, data.tahun_pembuatan, data.tahun_operasi, data.status_kelaikan,
+            JSON.stringify(data.sertifikasi || []), JSON.stringify(data.pesawat || []),
+            data.kondisi, data.status, data.status_pemeliharaan,
+            data.persentasi, data.permasalahan_teknis, data.tds, data.keterangan,
+            JSON.stringify(data.fotos || []), id
+        ]);
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Data not found' });
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('Error updating harkan:', err);
+        res.status(500).json({ error: 'Internal server error', details: err.message });
+    }
+});
+
+// Delete Harkan
+app.delete('/api/harkan/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query('DELETE FROM data_harkan WHERE id = $1 RETURNING *', [id]);
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Data not found' });
+        res.json({ message: 'Data deleted successfully' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// ==================== END DATA HARKAN ENDPOINTS ====================
+
 // ==================== DISKES (FASILITAS KESEHATAN) ENDPOINTS ====================
 
 // Get All DisKes Assets
@@ -2206,8 +2373,8 @@ app.post('/api/assets/diskes', async (req, res) => {
     const { name, type, location, capacity, staff, status, description, longitude, latitude, tahun_beroperasi, sarana } = req.body;
     try {
         const result = await pool.query(
-            `INSERT INTO assets_diskes (name, type, location, capacity, staff, status, description, longitude, latitude, tahun_beroperasi, sarana)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+            `INSERT INTO assets_diskes(name, type, location, capacity, staff, status, description, longitude, latitude, tahun_beroperasi, sarana)
+VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING * `,
             [name, type, location, capacity, staff, status, description, longitude, latitude, tahun_beroperasi, JSON.stringify(sarana || [])]
         );
         res.json(result.rows[0]);
@@ -2224,9 +2391,9 @@ app.put('/api/assets/diskes/:id', async (req, res) => {
     try {
         const result = await pool.query(
             `UPDATE assets_diskes SET
-             name = $1, type = $2, location = $3, capacity = $4, staff = $5, status = $6, description = $7, 
-             longitude = $8, latitude = $9, tahun_beroperasi = $10, sarana = $11, updated_at = NOW()
-             WHERE id = $12 RETURNING *`,
+name = $1, type = $2, location = $3, capacity = $4, staff = $5, status = $6, description = $7,
+    longitude = $8, latitude = $9, tahun_beroperasi = $10, sarana = $11, updated_at = NOW()
+             WHERE id = $12 RETURNING * `,
             [name, type, location, capacity, staff, status, description, longitude, latitude, tahun_beroperasi, JSON.stringify(sarana || []), id]
         );
         if (result.rows.length === 0) return res.status(404).json({ error: 'Facility not found' });
@@ -2252,7 +2419,7 @@ app.delete('/api/assets/diskes/:id', async (req, res) => {
 
 if (process.env.NODE_ENV !== 'production') {
     app.listen(port, () => {
-        console.log(`Server running on port ${port}`);
+        console.log(`Server running on port ${port} `);
     });
 }
 
