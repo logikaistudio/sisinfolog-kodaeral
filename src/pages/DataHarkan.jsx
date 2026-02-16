@@ -189,6 +189,7 @@ function DataHarkan() {
 
     const [items, setItems] = useState([])
     const [loading, setLoading] = useState(true)
+    const [migrationStatus, setMigrationStatus] = useState(null)
 
     // Fetch data from API on mount
     useEffect(() => {
@@ -201,11 +202,76 @@ function DataHarkan() {
             const finalEndpoint = import.meta.env.PROD ? endpoint : `http://localhost:3001${endpoint}`
             const response = await fetch(finalEndpoint)
             const data = await response.json()
-            setItems(data)
+
+            // Check if database is empty and localStorage has data
+            if (data.length === 0) {
+                await migrateFromLocalStorage(finalEndpoint)
+                // Fetch again after migration
+                const response2 = await fetch(finalEndpoint)
+                const data2 = await response2.json()
+                setItems(data2)
+            } else {
+                setItems(data)
+            }
+
             setLoading(false)
         } catch (error) {
             console.error('Error fetching harkan data:', error)
             setLoading(false)
+        }
+    }
+
+    const migrateFromLocalStorage = async (apiEndpoint) => {
+        try {
+            const storedData = localStorage.getItem('dataHarkan')
+            if (!storedData) {
+                console.log('No localStorage data to migrate')
+                return
+            }
+
+            const localData = JSON.parse(storedData)
+            if (!Array.isArray(localData) || localData.length === 0) {
+                console.log('No valid data in localStorage')
+                return
+            }
+
+            console.log(`🔄 Auto-migrating ${localData.length} records from localStorage to database...`)
+            setMigrationStatus(`Migrating ${localData.length} records...`)
+
+            let successCount = 0
+            for (const item of localData) {
+                try {
+                    // Remove old ID, let database generate new one
+                    const { id, ...itemData } = item
+
+                    // Ensure arrays exist
+                    itemData.sertifikasi = itemData.sertifikasi || []
+                    itemData.pesawat = itemData.pesawat || []
+                    itemData.fotos = itemData.fotos || []
+
+                    const response = await fetch(apiEndpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(itemData)
+                    })
+
+                    if (response.ok) {
+                        successCount++
+                    }
+                } catch (err) {
+                    console.error('Failed to migrate item:', err)
+                }
+            }
+
+            console.log(`✅ Migration complete: ${successCount}/${localData.length} records migrated`)
+            setMigrationStatus(`Migration complete: ${successCount} records`)
+
+            // Optional: Clear localStorage after successful migration
+            // localStorage.removeItem('dataHarkan')
+
+        } catch (error) {
+            console.error('Migration error:', error)
+            setMigrationStatus('Migration failed')
         }
     }
     const [isModalOpen, setIsModalOpen] = useState(false)
@@ -445,6 +511,26 @@ function DataHarkan() {
                 padding: '24px',
                 border: '1px solid #f1f5f9'
             }}>
+                {/* Migration Status Notification */}
+                {migrationStatus && (
+                    <div style={{
+                        padding: '12px 16px',
+                        borderRadius: '10px',
+                        background: migrationStatus.includes('complete') ? '#dcfce7' : '#dbeafe',
+                        border: `1px solid ${migrationStatus.includes('complete') ? '#86efac' : '#93c5fd'}`,
+                        color: migrationStatus.includes('complete') ? '#166534' : '#1e40af',
+                        marginBottom: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        fontSize: '0.9rem',
+                        fontWeight: '500'
+                    }}>
+                        <span>{migrationStatus.includes('complete') ? '✅' : '🔄'}</span>
+                        <span>{migrationStatus}</span>
+                    </div>
+                )}
+
                 {/* Toolbar */}
                 <div style={{
                     display: 'flex',
