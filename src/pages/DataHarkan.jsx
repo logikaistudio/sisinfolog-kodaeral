@@ -266,8 +266,11 @@ function DataHarkan() {
             console.log(`✅ Migration complete: ${successCount}/${localData.length} records migrated`)
             setMigrationStatus(`Migration complete: ${successCount} records`)
 
-            // Optional: Clear localStorage after successful migration
-            // localStorage.removeItem('dataHarkan')
+            // Auto-clear localStorage after successful migration
+            if (successCount > 0) {
+                localStorage.removeItem('dataHarkan')
+                console.log('🗑️ localStorage cleared after successful migration')
+            }
 
         } catch (error) {
             console.error('Migration error:', error)

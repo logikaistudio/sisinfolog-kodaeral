@@ -44,7 +44,7 @@ const bangunanIcon = new L.Icon({
 // faslabuhIcon definition moved inside component to support dynamic state
 
 // Configurable Node Settings for Harkan
-const HARKAN_NODE_COLOR = '#15803d' // Dark Green
+const HARKAN_NODE_COLOR = '#eab308' // Yellow
 const HARKAN_NODE_SIZE = 18
 
 const harkanIcon = new L.Icon({
@@ -84,7 +84,7 @@ function PetaFaslan() {
     // Component State for Faslabuh Settings
     const [faslabuhSettings, setFaslabuhSettings] = useState(() => {
         const saved = localStorage.getItem('faslabuhSettings')
-        return saved ? JSON.parse(saved) : { color: '#011F5B', size: 24 } // Dark Green/Navy, larger size
+        return saved ? JSON.parse(saved) : { color: '#ef4444', size: 24 } // Red, larger size
     })
     const [showSettings, setShowSettings] = useState(false)
 
