@@ -1,10 +1,92 @@
 import { useState, useRef, useEffect } from 'react'
-import * as XLSX_Module from 'xlsx/xlsx.mjs'
+import * as XLSX from 'xlsx'
 
-// Fallback logic
-const XLSX = XLSX_Module && XLSX_Module.read ? XLSX_Module : window.XLSX
+// Font system modern
+const FONT_SYSTEM = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+const FONT_MONO = 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace'
 
-const FONT_SYSTEM = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+// Dropdown options
+const OPTIONS = {
+    provinsi: [
+        'Aceh',
+        'Sumatera Utara',
+        'Sumatera Barat',
+        'Riau',
+        'Kepulauan Riau',
+        'Jambi',
+        'Sumatera Selatan',
+        'Bangka Belitung',
+        'Bengkulu',
+        'Lampung',
+        'DKI Jakarta',
+        'Banten',
+        'Jawa Barat',
+        'Jawa Tengah',
+        'DI Yogyakarta',
+        'Jawa Timur',
+        'Bali',
+        'Nusa Tenggara Barat',
+        'Nusa Tenggara Timur',
+        'Kalimantan Barat',
+        'Kalimantan Tengah',
+        'Kalimantan Selatan',
+        'Kalimantan Timur',
+        'Kalimantan Utara',
+        'Sulawesi Utara',
+        'Sulawesi Tengah',
+        'Sulawesi Selatan',
+        'Sulawesi Tenggara',
+        'Gorontalo',
+        'Sulawesi Barat',
+        'Maluku',
+        'Maluku Utara',
+        'Papua',
+        'Papua Barat'
+    ],
+    frekuensi: [50, 60],
+    tegangan: [220, 380, 440],
+    sumber_listrik: ['PLN', 'Genset', 'Tenaga Surya', 'PLN & Genset', 'Hybrid'],
+    sumber_air: ['PDAM', 'Sumur Bor', 'Tangki', 'Desalinasi', 'Lainnya'],
+    bbm: ['Solar', 'Pertamax', 'Solar & Pertamax', 'Tidak Ada', 'Lainnya']
+}
+
+// Mapping Wilayah/Kota berdasarkan Provinsi
+const WILAYAH_BY_PROVINSI = {
+    'Aceh': ['Banda Aceh', 'Sabang', 'Lhokseumawe', 'Langsa', 'Subulussalam', 'Aceh Besar', 'Aceh Barat', 'Aceh Selatan', 'Aceh Timur', 'Aceh Utara', 'Aceh Tengah', 'Aceh Tenggara', 'Aceh Barat Daya', 'Aceh Jaya', 'Aceh Singkil', 'Aceh Tamiang', 'Bener Meriah', 'Bireuen', 'Gayo Lues', 'Nagan Raya', 'Pidie', 'Pidie Jaya', 'Simeulue'],
+    'Sumatera Utara': ['Medan', 'Binjai', 'Pematangsiantar', 'Tanjungbalai', 'Tebing Tinggi', 'Padang Sidempuan', 'Gunungsitoli', 'Asahan', 'Batubara', 'Dairi', 'Deli Serdang', 'Humbang Hasundutan', 'Karo', 'Labuhanbatu', 'Labuhanbatu Selatan', 'Labuhanbatu Utara', 'Langkat', 'Mandailing Natal', 'Nias', 'Nias Barat', 'Nias Selatan', 'Nias Utara', 'Padang Lawas', 'Padang Lawas Utara', 'Pakpak Bharat', 'Samosir', 'Serdang Bedagai', 'Simalungun', 'Tapanuli Selatan', 'Tapanuli Tengah', 'Tapanuli Utara', 'Toba Samosir'],
+    'Sumatera Barat': ['Padang', 'Bukittinggi', 'Padang Panjang', 'Pariaman', 'Payakumbuh', 'Sawahlunto', 'Solok', 'Agam', 'Dharmasraya', 'Kepulauan Mentawai', 'Lima Puluh Kota', 'Padang Pariaman', 'Pasaman', 'Pasaman Barat', 'Pesisir Selatan', 'Sijunjung', 'Solok', 'Solok Selatan', 'Tanah Datar'],
+    'Riau': ['Pekanbaru', 'Dumai', 'Bengkalis', 'Indragiri Hilir', 'Indragiri Hulu', 'Kampar', 'Kepulauan Meranti', 'Kuantan Singingi', 'Pelalawan', 'Rokan Hilir', 'Rokan Hulu', 'Siak'],
+    'Kepulauan Riau': ['Batam', 'Tanjung Pinang', 'Bintan', 'Karimun', 'Kepulauan Anambas', 'Lingga', 'Natuna'],
+    'Jambi': ['Jambi', 'Sungai Penuh', 'Batang Hari', 'Bungo', 'Kerinci', 'Merangin', 'Muaro Jambi', 'Sarolangun', 'Tanjung Jabung Barat', 'Tanjung Jabung Timur', 'Tebo'],
+    'Sumatera Selatan': ['Palembang', 'Lubuklinggau', 'Pagar Alam', 'Prabumulih', 'Banyuasin', 'Empat Lawang', 'Lahat', 'Muara Enim', 'Musi Banyuasin', 'Musi Rawas', 'Musi Rawas Utara', 'Ogan Ilir', 'Ogan Komering Ilir', 'Ogan Komering Ulu', 'Ogan Komering Ulu Selatan', 'Ogan Komering Ulu Timur', 'Penukal Abab Lematang Ilir'],
+    'Bangka Belitung': ['Pangkal Pinang', 'Bangka', 'Bangka Barat', 'Bangka Selatan', 'Bangka Tengah', 'Belitung', 'Belitung Timur'],
+    'Bengkulu': ['Bengkulu', 'Bengkulu Selatan', 'Bengkulu Tengah', 'Bengkulu Utara', 'Kaur', 'Kepahiang', 'Lebong', 'Mukomuko', 'Rejang Lebong', 'Seluma'],
+    'Lampung': ['Bandar Lampung', 'Metro', 'Lampung Barat', 'Lampung Selatan', 'Lampung Tengah', 'Lampung Timur', 'Lampung Utara', 'Mesuji', 'Pesawaran', 'Pesisir Barat', 'Pringsewu', 'Tanggamus', 'Tulang Bawang', 'Tulang Bawang Barat', 'Way Kanan'],
+    'DKI Jakarta': ['Jakarta Pusat', 'Jakarta Utara', 'Jakarta Barat', 'Jakarta Selatan', 'Jakarta Timur', 'Kepulauan Seribu'],
+    'Banten': ['Serang', 'Tangerang', 'Cilegon', 'Tangerang Selatan', 'Lebak', 'Pandeglang', 'Serang', 'Tangerang'],
+    'Jawa Barat': ['Bandung', 'Bekasi', 'Bogor', 'Cimahi', 'Cirebon', 'Depok', 'Sukabumi', 'Tasikmalaya', 'Banjar', 'Bandung', 'Bandung Barat', 'Bekasi', 'Bogor', 'Ciamis', 'Cianjur', 'Cirebon', 'Garut', 'Indramayu', 'Karawang', 'Kuningan', 'Majalengka', 'Pangandaran', 'Purwakarta', 'Subang', 'Sukabumi', 'Sumedang', 'Tasikmalaya'],
+    'Jawa Tengah': ['Semarang', 'Magelang', 'Pekalongan', 'Salatiga', 'Surakarta', 'Tegal', 'Banjarnegara', 'Banyumas', 'Batang', 'Blora', 'Boyolali', 'Brebes', 'Cilacap', 'Demak', 'Grobogan', 'Jepara', 'Karanganyar', 'Kebumen', 'Kendal', 'Klaten', 'Kudus', 'Magelang', 'Pati', 'Pekalongan', 'Pemalang', 'Purbalingga', 'Purworejo', 'Rembang', 'Semarang', 'Sragen', 'Sukoharjo', 'Tegal', 'Temanggung', 'Wonogiri', 'Wonosobo'],
+    'DI Yogyakarta': ['Yogyakarta', 'Bantul', 'Gunung Kidul', 'Kulon Progo', 'Sleman'],
+    'Jawa Timur': ['Surabaya', 'Batu', 'Blitar', 'Kediri', 'Madiun', 'Malang', 'Mojokerto', 'Pasuruan', 'Probolinggo', 'Bangkalan', 'Banyuwangi', 'Blitar', 'Bojonegoro', 'Bondowoso', 'Gresik', 'Jember', 'Jombang', 'Kediri', 'Lamongan', 'Lumajang', 'Madiun', 'Magetan', 'Malang', 'Mojokerto', 'Nganjuk', 'Ngawi', 'Pacitan', 'Pamekasan', 'Pasuruan', 'Ponorogo', 'Probolinggo', 'Sampang', 'Sidoarjo', 'Situbondo', 'Sumenep', 'Trenggalek', 'Tuban', 'Tulungagung'],
+    'Bali': ['Denpasar', 'Badung', 'Bangli', 'Buleleng', 'Gianyar', 'Jembrana', 'Karangasem', 'Klungkung', 'Tabanan'],
+    'Nusa Tenggara Barat': ['Mataram', 'Bima', 'Bima', 'Dompu', 'Lombok Barat', 'Lombok Tengah', 'Lombok Timur', 'Lombok Utara', 'Sumbawa', 'Sumbawa Barat'],
+    'Nusa Tenggara Timur': ['Kupang', 'Alor', 'Belu', 'Ende', 'Flores Timur', 'Kupang', 'Lembata', 'Malaka', 'Manggarai', 'Manggarai Barat', 'Manggarai Timur', 'Nagekeo', 'Ngada', 'Rote Ndao', 'Sabu Raijua', 'Sikka', 'Sumba Barat', 'Sumba Barat Daya', 'Sumba Tengah', 'Sumba Timur', 'Timor Tengah Selatan', 'Timor Tengah Utara'],
+    'Kalimantan Barat': ['Pontianak', 'Singkawang', 'Bengkayang', 'Kapuas Hulu', 'Kayong Utara', 'Ketapang', 'Kubu Raya', 'Landak', 'Melawi', 'Mempawah', 'Sambas', 'Sanggau', 'Sekadau', 'Sintang'],
+    'Kalimantan Tengah': ['Palangka Raya', 'Barito Selatan', 'Barito Timur', 'Barito Utara', 'Gunung Mas', 'Kapuas', 'Katingan', 'Kotawaringin Barat', 'Kotawaringin Timur', 'Lamandau', 'Murung Raya', 'Pulang Pisau', 'Seruyan', 'Sukamara'],
+    'Kalimantan Selatan': ['Banjarmasin', 'Banjarbaru', 'Balangan', 'Banjar', 'Barito Kuala', 'Hulu Sungai Selatan', 'Hulu Sungai Tengah', 'Hulu Sungai Utara', 'Kotabaru', 'Tabalong', 'Tanah Bumbu', 'Tanah Laut', 'Tapin'],
+    'Kalimantan Timur': ['Samarinda', 'Balikpapan', 'Bontang', 'Berau', 'Kutai Barat', 'Kutai Kartanegara', 'Kutai Timur', 'Mahakam Ulu', 'Paser', 'Penajam Paser Utara'],
+    'Kalimantan Utara': ['Tarakan', 'Bulungan', 'Malinau', 'Nunukan', 'Tana Tidung'],
+    'Sulawesi Utara': ['Manado', 'Bitung', 'Kotamobagu', 'Tomohon', 'Bolaang Mongondow', 'Bolaang Mongondow Selatan', 'Bolaang Mongondow Timur', 'Bolaang Mongondow Utara', 'Kepulauan Sangihe', 'Kepulauan Siau Tagulandang Biaro', 'Kepulauan Talaud', 'Minahasa', 'Minahasa Selatan', 'Minahasa Tenggara', 'Minahasa Utara'],
+    'Sulawesi Tengah': ['Palu', 'Banggai', 'Banggai Kepulauan', 'Banggai Laut', 'Buol', 'Donggala', 'Morowali', 'Morowali Utara', 'Parigi Moutong', 'Poso', 'Sigi', 'Tojo Una-Una', 'Toli-Toli'],
+    'Sulawesi Selatan': ['Makassar', 'Palopo', 'Parepare', 'Bantaeng', 'Barru', 'Bone', 'Bulukumba', 'Enrekang', 'Gowa', 'Jeneponto', 'Kepulauan Selayar', 'Luwu', 'Luwu Timur', 'Luwu Utara', 'Maros', 'Pangkajene dan Kepulauan', 'Pinrang', 'Sidenreng Rappang', 'Sinjai', 'Soppeng', 'Takalar', 'Tana Toraja', 'Toraja Utara', 'Wajo'],
+    'Sulawesi Tenggara': ['Kendari', 'Bau-Bau', 'Bombana', 'Buton', 'Buton Selatan', 'Buton Tengah', 'Buton Utara', 'Kolaka', 'Kolaka Timur', 'Kolaka Utara', 'Konawe', 'Konawe Kepulauan', 'Konawe Selatan', 'Konawe Utara', 'Muna', 'Muna Barat', 'Wakatobi'],
+    'Gorontalo': ['Gorontalo', 'Boalemo', 'Bone Bolango', 'Gorontalo', 'Gorontalo Utara', 'Pohuwato'],
+    'Sulawesi Barat': ['Mamuju', 'Majene', 'Mamasa', 'Mamuju', 'Mamuju Tengah', 'Mamuju Utara', 'Polewali Mandar'],
+    'Maluku': ['Ambon', 'Tual', 'Buru', 'Buru Selatan', 'Kepulauan Aru', 'Maluku Barat Daya', 'Maluku Tengah', 'Maluku Tenggara', 'Maluku Tenggara Barat', 'Seram Bagian Barat', 'Seram Bagian Timur'],
+    'Maluku Utara': ['Ternate', 'Tidore Kepulauan', 'Halmahera Barat', 'Halmahera Selatan', 'Halmahera Tengah', 'Halmahera Timur', 'Halmahera Utara', 'Kepulauan Sula', 'Pulau Morotai', 'Pulau Taliabu'],
+    'Papua': ['Jayapura', 'Asmat', 'Biak Numfor', 'Boven Digoel', 'Deiyai', 'Dogiyai', 'Intan Jaya', 'Jayapura', 'Jayawijaya', 'Keerom', 'Kepulauan Yapen', 'Lanny Jaya', 'Mamberamo Raya', 'Mamberamo Tengah', 'Mappi', 'Merauke', 'Mimika', 'Nabire', 'Nduga', 'Paniai', 'Pegunungan Bintang', 'Puncak', 'Puncak Jaya', 'Sarmi', 'Supiori', 'Tolikara', 'Waropen', 'Yahukimo', 'Yalimo'],
+    'Papua Barat': ['Manokwari', 'Sorong', 'Fakfak', 'Kaimana', 'Manokwari', 'Manokwari Selatan', 'Maybrat', 'Pegunungan Arfak', 'Raja Ampat', 'Sorong', 'Sorong Selatan', 'Tambrauw', 'Teluk Bintuni', 'Teluk Wondama']
+}
 
 function Faslabuh() {
     const [data, setData] = useState([])
@@ -12,8 +94,17 @@ function Faslabuh() {
     const [selectedItem, setSelectedItem] = useState(null)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [isEditMode, setIsEditMode] = useState(false)
+    const [editingId, setEditingId] = useState(null)
     const fileInputRef = useRef(null)
 
+    // Import states
+    const [importMode, setImportMode] = useState('upsert')
+    const [previewData, setPreviewData] = useState([])
+    const [showPreview, setShowPreview] = useState(false)
+    const [importing, setImporting] = useState(false)
+    const [importProgress, setImportProgress] = useState(0)
+
+    // Fetch data from API
     useEffect(() => {
         fetchData()
     }, [])
@@ -22,12 +113,14 @@ function Faslabuh() {
         try {
             setLoading(true)
             const response = await fetch('/api/faslabuh')
-            if (!response.ok) throw new Error('Failed to fetch')
+            if (!response.ok) throw new Error('Failed to fetch data')
             const result = await response.json()
+
+            // Parse JSON fields
             setData(result)
         } catch (error) {
-            console.error('Error:', error)
-            alert('❌ Gagal memuat data')
+            console.error('Error fetching faslabuh data:', error)
+            alert('❌ Gagal memuat data: ' + error.message)
         } finally {
             setLoading(false)
         }
@@ -35,447 +128,1501 @@ function Faslabuh() {
 
     const handleAddNew = () => {
         setSelectedItem({
-            lantamal: '', lanal_faslan: '', lokasi_dermaga: '', nama_dermaga: '', jenis_dermaga: '',
-            panjang_m: 0, lebar_m: 0, kedalaman_m: 0, luas_m2: 0, konstruksi: '', tahun_pembangunan: null,
-            kapasitas_kapal: '', tonase_max: 0, jumlah_tambat: 0, panjang_tambat_m: 0,
-            kondisi_dermaga: 'Baik', kondisi_lantai: 'Baik', kondisi_dinding: 'Baik', kondisi_fender: 'Baik',
-            bollard: 0, fender: 0, tangga_kapal: 0, lampu_dermaga: 0,
-            air_bersih: false, listrik: false, bbm: false, crane: false,
-            elevasi_m: 0, draft_m: 0, lebar_apron_m: 0, panjang_apron_m: 0,
-            fungsi_dermaga: '', keterangan: '', status_operasional: 'Aktif',
-            longitude: null, latitude: null
+            lokasi: '', wilayah: '', lon: 0, lat: 0,
+            nama_dermaga: '', konstruksi: '',
+            panjang_m: 0, lebar_m: 0, luas_m2: 0,
+            draft_lwl_m: 0, pasut_hwl_lwl_m: 0, kondisi_percent: 0,
+
+            displacement_kri: '', berat_sandar_maks_ton: 0, tipe_kapal: '', jumlah_maks: 0,
+
+            kemampuan_plat_lantai_ton: 0, jenis_ranmor: '', berat_ranmor_ton: 0,
+
+            titik_sambung_listrik: 0, kapasitas_a: 0, tegangan_v: 220, frek_hz: 50,
+            sumber_listrik: 'PLN', daya_kva: 0,
+
+            kapasitas_air_gwt_m3: 0, debit_air_m3_jam: 0, sumber_air: 'PDAM',
+
+            kapasitas_bbm: '', hydrant: '', keterangan: ''
         })
         setIsEditMode(true)
         setIsModalOpen(true)
     }
 
     const handleRowClick = (item) => {
+        setEditingId(item.id)
         setSelectedItem({ ...item })
-        setIsEditMode(false)
+        setIsEditMode(false) // Default to read-only view
         setIsModalOpen(true)
     }
 
-    const handleEdit = () => {
-        setIsEditMode(true)
+    const handleDelete = async (id) => {
+        if (!confirm('⚠️ Yakin ingin menghapus data ini?')) return
+
+        try {
+            const response = await fetch(`/api/faslabuh/${id}`, {
+                method: 'DELETE'
+            })
+
+            if (!response.ok) throw new Error('Failed to delete')
+
+            alert('✅ Data berhasil dihapus!')
+            setIsModalOpen(false)
+            setEditingId(null)
+            fetchData() // Refresh data
+        } catch (error) {
+            console.error('Error deleting:', error)
+            alert('❌ Gagal menghapus data: ' + error.message)
+        }
     }
 
     const handleSave = async (e) => {
         e.preventDefault()
+
+        // Helper: Convert to number or null/0 (flexible)
+        // User request: "Not mandatory", so allow null/empty
+        const toNum = (val) => {
+            if (val === '' || val === null || val === undefined) return null
+            const parsed = parseFloat(val)
+            return isNaN(parsed) ? null : parsed
+        }
+
+        const p = toNum(selectedItem.panjang_m) || 0
+        const l = toNum(selectedItem.lebar_m) || 0
+
+        const updated = {
+            ...selectedItem,
+            luas_m2: p * l,
+
+            panjang_m: toNum(selectedItem.panjang_m),
+            lebar_m: toNum(selectedItem.lebar_m),
+            draft_lwl_m: toNum(selectedItem.draft_lwl_m),
+            pasut_hwl_lwl_m: toNum(selectedItem.pasut_hwl_lwl_m),
+            kondisi_percent: toNum(selectedItem.kondisi_percent),
+
+            berat_sandar_maks_ton: toNum(selectedItem.berat_sandar_maks_ton),
+            jumlah_maks: toNum(selectedItem.jumlah_maks),
+
+            kemampuan_plat_lantai_ton: toNum(selectedItem.kemampuan_plat_lantai_ton),
+            berat_ranmor_ton: toNum(selectedItem.berat_ranmor_ton),
+
+            titik_sambung_listrik: toNum(selectedItem.titik_sambung_listrik),
+            kapasitas_a: toNum(selectedItem.kapasitas_a),
+            tegangan_v: toNum(selectedItem.tegangan_v),
+            frek_hz: toNum(selectedItem.frek_hz),
+            daya_kva: toNum(selectedItem.daya_kva),
+            kapasitas_air_gwt_m3: toNum(selectedItem.kapasitas_air_gwt_m3),
+            debit_air_m3_jam: toNum(selectedItem.debit_air_m3_jam)
+        }
+
         try {
-            const isNew = !selectedItem.id
-            const url = isNew ? '/api/faslabuh' : `/api/faslabuh/${selectedItem.id}`
+            const isNew = !updated.id
+            const url = isNew ? '/api/faslabuh' : `/api/faslabuh/${updated.id}`
             const method = isNew ? 'POST' : 'PUT'
 
             const response = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(selectedItem)
+                body: JSON.stringify(updated)
             })
 
             if (!response.ok) throw new Error('Failed to save')
+
             alert('✅ Data berhasil disimpan!')
+            setIsEditMode(false)
             setIsModalOpen(false)
-            fetchData()
+            setEditingId(null)
+            fetchData() // Refresh data
         } catch (error) {
-            console.error('Error:', error)
-            alert('❌ Gagal menyimpan: ' + error.message)
+            console.error('Error saving:', error)
+            alert('❌ Gagal menyimpan data: ' + error.message)
         }
     }
 
-    const handleDelete = async () => {
-        if (!confirm('⚠️ Yakin ingin menghapus?')) return
-        try {
-            const response = await fetch(`/api/faslabuh/${selectedItem.id}`, { method: 'DELETE' })
-            if (!response.ok) throw new Error('Failed to delete')
-            alert('✅ Data berhasil dihapus!')
-            setIsModalOpen(false)
-            fetchData()
-        } catch (error) {
-            alert('❌ Gagal menghapus: ' + error.message)
-        }
+    const handleCancel = () => {
+        setIsEditMode(false)
+        setIsModalOpen(false)
+        setEditingId(null)
+        setSelectedItem(null)
+    }
+
+
+
+    const handleExport = () => {
+        const excelData = data.map(item => ({
+            'Provinsi': item.provinsi,
+            'Wilayah': item.wilayah,
+            'Lokasi': item.lokasi,
+            'Nama Dermaga': item.nama_dermaga,
+            'Kode Barang': item.kode_barang,
+            'No Sertifikat': item.no_sertifikat,
+            'Tgl Sertifikat': item.tgl_sertifikat,
+            'Longitude': item.lon,
+            'Latitude': item.lat,
+
+            'Konstruksi': item.konstruksi,
+            'Panjang (m)': item.panjang_m,
+            'Lebar (m)': item.lebar_m,
+            'Luas (m²)': item.luas_m2,
+            'Draft LWL (m)': item.draft_lwl_m,
+            'Pasut HWL-LWL (m)': item.pasut_hwl_lwl_m,
+            'Kondisi (%)': item.kondisi_percent,
+
+            'Displacement KRI': item.displacement_kri,
+            'Berat Sandar Maks (ton)': item.berat_sandar_maks_ton,
+            'Tipe Kapal': item.tipe_kapal,
+            'Jumlah Maks': item.jumlah_maks,
+
+            'Kemampuan Plat Lantai (ton)': item.kemampuan_plat_lantai_ton,
+            'Jenis Ranmor': item.jenis_ranmor,
+            'Berat Ranmor (ton)': item.berat_ranmor_ton,
+
+            'Titik Sambung Listrik': item.titik_sambung_listrik,
+            'Kapasitas (A)': item.kapasitas_a,
+            'Tegangan (V)': item.tegangan_v,
+            'Frek (Hz)': item.frek_hz,
+            'Sumber Listrik': item.sumber_listrik,
+            'Daya (kVA)': item.daya_kva,
+
+            'Kapasitas Air GWT (m³)': item.kapasitas_air_gwt_m3,
+            'Debit Air (m³/jam)': item.debit_air_m3_jam,
+            'Sumber Air': item.sumber_air,
+
+            'Kapasitas BBM': item.kapasitas_bbm,
+            'Hydrant': item.hydrant,
+            'Keterangan': item.keterangan
+        }))
+
+        const ws = XLSX.utils.json_to_sheet(excelData)
+
+        // Auto-width
+        const objectMaxLength = []
+        excelData.forEach(row => {
+            Object.values(row).forEach((value, i) => {
+                let cellValue = value === null ? '' : String(value)
+                objectMaxLength[i] = Math.max((objectMaxLength[i] || 10), cellValue.length + 2)
+            })
+        })
+        ws['!cols'] = objectMaxLength.map(w => ({ wch: w }))
+
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, ws, "Faslabuh Data")
+        XLSX.writeFile(wb, "Faslabuh_Export.xlsx")
     }
 
     const handleExportTemplate = () => {
-        window.open('/Template_Import_Faslabuh.xlsx', '_blank')
+        const templateHeaders = {
+            'Provinsi': '', 'Wilayah': '', 'Lokasi': '', 'Nama Dermaga': '',
+            'Kode Barang': '', 'No Sertifikat': '', 'Tgl Sertifikat': '',
+            'Longitude': '', 'Latitude': '',
+            'Konstruksi': '', 'Panjang (m)': '', 'Lebar (m)': '', 'Luas (m²)': '',
+            'Draft LWL (m)': '', 'Pasut HWL-LWL (m)': '', 'Kondisi (%)': '',
+            'Displacement KRI': '', 'Berat Sandar Maks (ton)': '', 'Tipe Kapal': '', 'Jumlah Maks': '',
+            'Kemampuan Plat Lantai (ton)': '', 'Jenis Ranmor': '', 'Berat Ranmor (ton)': '',
+            'Titik Sambung Listrik': '', 'Kapasitas (A)': '', 'Tegangan (V)': '', 'Frek (Hz)': '', 'Sumber Listrik': '', 'Daya (kVA)': '',
+            'Kapasitas Air GWT (m³)': '', 'Debit Air (m³/jam)': '', 'Sumber Air': '',
+            'Kapasitas BBM': '', 'Hydrant': '', 'Keterangan': ''
+        }
+
+        const templateData = [templateHeaders] // Only headers
+        const ws = XLSX.utils.json_to_sheet(templateData)
+
+        // Set column widths
+        ws['!cols'] = Array(35).fill({ wch: 15 })
+
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, ws, "Template Faslabuh")
+        XLSX.writeFile(wb, "Template_Faslabuh.xlsx")
+
+        alert('✅ Template berhasil didownload!\n\nPetunjuk:\n- Baris 1: Header (jangan diubah)\n- Baris 2: Contoh data\n- Baris 3+: Isi data Anda')
     }
 
-    const handleImport = (e) => {
-        console.log('Import started')
+    const handleFileUpload = (e) => {
         const file = e.target.files[0]
-        if (!file) {
-            console.log('No file selected')
-            return
-        }
-
-        console.log('File selected:', file.name)
-
-        // Check local XLSX availability if needed, but assuming import works
-        if (typeof XLSX === 'undefined') {
-            console.error('XLSX library is undefined!')
-            alert('Library Excel tidak dimuat. Silakan refresh halaman.')
-            return
-        }
+        if (!file) return
 
         const reader = new FileReader()
-
-        reader.onerror = (err) => {
-            console.error('FileReader error:', err)
-            alert('Gagal membaca file')
-        }
-
-        reader.onload = async (event) => {
-            console.log('File read success, parsing...')
+        reader.onload = (event) => {
             try {
-                const data = new Uint8Array(event.target.result)
-                const wb = XLSX.read(data, { type: 'array' })
+                const wb = XLSX.read(event.target.result, { type: 'binary' })
+                const wsname = wb.SheetNames[0]
+                const ws = wb.Sheets[wsname]
 
-                if (!wb.SheetNames.length) {
-                    throw new Error('Excel file is empty')
-                }
+                // Read as Array of Arrays (Row based, Column indexed 0,1,2...)
+                const rawData = XLSX.utils.sheet_to_json(ws, { header: 1 })
 
-                const ws = wb.Sheets[wb.SheetNames[0]]
-                const jsonData = XLSX.utils.sheet_to_json(ws)
-                console.log('Parsed rows:', jsonData.length)
-
-                if (jsonData.length === 0) {
-                    alert('File Excel kosong atau tidak ada data.')
+                if (rawData.length === 0) {
+                    alert('❌ File Excel kosong!')
                     return
                 }
 
-                // Helper to find value case-insensitive and with aliases
-                const getValue = (row, keys) => {
-                    const rowKeys = Object.keys(row)
-                    for (const key of keys) {
-                        // Exact match
-                        if (row[key] !== undefined) return row[key]
-
-                        // Case insensitive match
-                        const foundKey = rowKeys.find(k => k.trim().toLowerCase() === key.toLowerCase())
-                        if (foundKey) return row[foundKey]
-                    }
-                    // Try partial match for complex keys if not found
-                    for (const key of keys) {
-                        const foundKey = rowKeys.find(k => k.toLowerCase().includes(key.toLowerCase()))
-                        if (foundKey) return row[foundKey]
-                    }
-                    return undefined
+                // --- DYNAMIC HEADER DETECTION ---
+                // Scan first 20 rows to find key columns
+                const headerMap = {
+                    lokasi: -1,
+                    wilayah: -1,
+                    longitude: -1,
+                    latitude: -1,
+                    nama: -1,
+                    konstruksi: -1,
+                    panjang: -1,
+                    lebar: -1,
+                    draft: -1,
+                    pasut: -1,
+                    kondisi: -1,
+                    sandarKri: -1,
+                    sandarTon: -1,
+                    tipeKapal: -1,
+                    sandarJml: -1,
+                    platTon: -1,
+                    ranmorJenis: -1,
+                    ranmorTon: -1,
+                    listrikTitik: -1,
+                    listrikAmp: -1,
+                    listrikVolt: -1,
+                    listrikHz: -1,
+                    listrikSumber: -1,
+                    listrikKva: -1,
+                    airGwt: -1,
+                    airDebit: -1,
+                    airSumber: -1,
+                    bbm: -1,
+                    hydrant: -1,
+                    ket: -1
                 }
 
-                // State for merged cells (fill down)
-                let lastLantamal = ''
-                let lastFaslan = ''
+                // Helper to normalize string for matching
+                const norm = (val) => String(val || '').toUpperCase().trim()
 
-                // Map Excel to database fields
-                const mappedData = jsonData.map((row, i) => {
-                    if (i === 0) console.log('First row sample:', row)
+                let detectedHeaderRow = 0
 
-                    // Handle merged cells (fill down)
-                    const rawLantamal = getValue(row, ['LOKASI', 'Lantamal'])
-                    if (rawLantamal) lastLantamal = rawLantamal
+                // Scan rows 0-19
+                for (let r = 0; r < Math.min(rawData.length, 20); r++) {
+                    const row = rawData[r]
+                    let matchCount = 0
 
-                    const rawFaslan = getValue(row, ['WILAYAH', 'Lanal', 'Faslan', 'Satker'])
-                    if (rawFaslan) lastFaslan = rawFaslan
+                    row.forEach((cell, colIdx) => {
+                        const txt = norm(cell)
+
+                        // LOCK: Only set if -1 (First match wins from Left to Right, Top to Bottom)
+
+                        // Main Identifiers
+                        if (headerMap.lokasi === -1 && txt === 'LOKASI') { headerMap.lokasi = colIdx; matchCount++ }
+                        if (headerMap.wilayah === -1 && (txt.includes('WILAYAH') || txt.includes('LANTAMAL'))) { headerMap.wilayah = colIdx; matchCount++ }
+                        if (headerMap.longitude === -1 && (txt.includes('LON') || (txt.includes('BUJUR')))) { headerMap.longitude = colIdx; matchCount++ }
+                        if (headerMap.latitude === -1 && (txt.includes('LAT') || (txt.includes('LINTANG')))) { headerMap.latitude = colIdx; matchCount++ }
+                        if (headerMap.nama === -1 && (txt === 'NAMA' || txt === 'DERMAGA' || txt === 'NAMA DERMAGA')) { headerMap.nama = colIdx; matchCount++ }
+                        if (headerMap.konstruksi === -1 && (txt === 'KONSTRUKSI' || txt === 'CONS')) headerMap.konstruksi = colIdx
+
+                        // Dimensions
+                        if (headerMap.panjang === -1 && (txt === 'PANJANG' || txt === '(M)' || (txt.includes('PANJANG') && txt.includes('(M)')))) { headerMap.panjang = colIdx; matchCount++ }
+                        if (headerMap.lebar === -1 && (txt === 'LEBAR' || (txt.includes('LEBAR') && txt.includes('M')))) headerMap.lebar = colIdx
+                        if (headerMap.draft === -1 && (txt === 'DRAFT' || txt.includes('LWL') || txt.includes('DOLPHIN'))) headerMap.draft = colIdx
+                        if (headerMap.pasut === -1 && (txt.includes('PASUT') || txt.includes('HWL'))) headerMap.pasut = colIdx
+                        if (headerMap.kondisi === -1 && (txt === 'KONDISI' || txt.includes('KONDISI') || txt.includes('(%)'))) headerMap.kondisi = colIdx
+
+                        // Capabilities
+                        if (headerMap.sandarKri === -1 && (txt === 'KRI' || txt.includes('DISP'))) headerMap.sandarKri = colIdx
+                        if (headerMap.sandarTon === -1 && (txt.includes('BERAT') && txt.includes('SANDAR'))) headerMap.sandarTon = colIdx
+                        if (headerMap.tipeKapal === -1 && (txt.includes('TIPE') && txt.includes('KAPAL'))) headerMap.tipeKapal = colIdx
+                        if (headerMap.sandarJml === -1 && (txt.includes('JUMLAH') && !txt.includes('TITIK'))) headerMap.sandarJml = colIdx
+
+                        // Facilities
+                        if (headerMap.platTon === -1 && (txt.includes('PLAT') || (txt.includes('KEMAMPUAN') && txt.includes('LANTAI')))) headerMap.platTon = colIdx
+                        if (headerMap.ranmorJenis === -1 && (txt.includes('RANMOR') && (txt.includes('JENIS') || txt.includes('MACAM')))) headerMap.ranmorJenis = colIdx
+
+                        // Utilities
+                        if (headerMap.listrikTitik === -1 && (txt.includes('TITIK') && txt.includes('SAMBUNG'))) headerMap.listrikTitik = colIdx
+                        if (headerMap.listrikAmp === -1 && (txt.includes('KAPASITAS') && txt.includes('(A)'))) headerMap.listrikAmp = colIdx
+                        if (headerMap.listrikVolt === -1 && (txt.includes('TEGANGAN') || txt.includes('(V)'))) headerMap.listrikVolt = colIdx
+                        if (headerMap.listrikHz === -1 && (txt.includes('FREK') || txt === 'HZ' || txt === '(HZ)')) headerMap.listrikHz = colIdx
+                        if (headerMap.listrikSumber === -1 && txt === 'SUMBER') headerMap.listrikSumber = colIdx
+
+                        if (headerMap.listrikKva === -1 && ((txt.includes('DAYA') && txt.includes('KVA')) || txt === 'KVA' || txt.includes('PLN'))) headerMap.listrikKva = colIdx
+
+                        if (headerMap.airGwt === -1 && ((txt.includes('KAPASITAS') && txt.includes('AIR')) || (txt.includes('GWT') && txt.includes('M3')) || txt.includes('PDAM'))) headerMap.airGwt = colIdx
+                        if (headerMap.airDebit === -1 && (txt.includes('DEBIT') || (txt.includes('AIR') && txt.includes('JAM')))) headerMap.airDebit = colIdx
+
+                        if (headerMap.listrikSumber > -1 && headerMap.airSumber === -1 && txt === 'SUMBER' && colIdx > headerMap.listrikSumber) headerMap.airSumber = colIdx
+                        if (headerMap.airSumber === -1 && txt.includes('SUMBER') && txt.includes('AIR')) headerMap.airSumber = colIdx
+
+                        if (headerMap.bbm === -1 && (txt.includes('BBM') || txt.includes('SOLAR'))) headerMap.bbm = colIdx
+                        if (headerMap.hydrant === -1 && txt.includes('HYDRANT')) headerMap.hydrant = colIdx
+
+                        if (headerMap.ket === -1 && (txt === 'KET' || txt === 'KETERANGAN')) headerMap.ket = colIdx
+                    })
+
+                    if (matchCount >= 2) detectedHeaderRow = r
+                }
+
+                // Fallback Indices (Based on visual observation of standard complex excel) if dynamic fails
+                if (headerMap.panjang === -1) headerMap.panjang = 4 // Col E
+                if (headerMap.lebar === -1) headerMap.lebar = 5   // Col F
+                if (headerMap.konstruksi === -1) headerMap.konstruksi = 3 // Col D
+                if (headerMap.nama === -1) headerMap.nama = 2 // Col C
+
+                console.log('🔍 Detected Column Indices:', headerMap)
+
+                let mappedData = []
+                let lastWilayah = ''
+                let lastNamaDermaga = ''
+                let lastLokasi = ''
+
+                // Start iterating from detected header row + 1
+                const startRow = detectedHeaderRow + 1
+
+                mappedData = rawData.slice(startRow).map((row, index) => {
+                    const rowNum = index + startRow + 1
+                    const idx = headerMap
+
+                    // 0. Explicit Lokasi Column from Header
+                    if (idx.lokasi > -1 && row[idx.lokasi]) {
+                        const val = String(row[idx.lokasi]).trim()
+                        if (val && !val.includes('LOKASI')) lastLokasi = val.replace(/LANTAMAL/i, '').replace(/LANAL/i, '').trim()
+                    }
+
+                    // Determine Anchor (Nama)
+                    let colAnchor = ''
+                    if (idx.nama > -1 && row[idx.nama]) colAnchor = String(row[idx.nama]).trim()
+                    else if (row[2]) colAnchor = String(row[2]).trim() // Fallback Col C
+
+                    // 1. Explicit Wilayah Check (Flat Table Support)
+                    if (idx.wilayah > -1 && idx.wilayah !== idx.nama && row[idx.wilayah]) {
+                        const val = String(row[idx.wilayah]).trim()
+                        if (val && !val.includes('WILAYAH') && val.length > 2 && isNaN(Number(val))) {
+                            lastWilayah = val
+                            lastLokasi = val.replace(/LANTAMAL/i, '').replace(/LANAL/i, '').replace(/MAKO/i, '').trim()
+                        }
+                    }
+
+                    // 2. Hierarchical Header Check
+                    if (colAnchor.includes('LANTAMAL') || colAnchor.includes('LANAL') || colAnchor.includes('MAKO')) {
+                        lastWilayah = colAnchor
+                        lastLokasi = colAnchor.replace(/LANTAMAL/i, '').replace(/LANAL/i, '').replace(/MAKO/i, '').trim()
+                        lastNamaDermaga = ''
+                        return null
+                    }
+
+                    // Check for valid numeric dimension data to confirm this is a data row
+                    const validLen = typeof row[idx.panjang] === 'number' || parseFloat(row[idx.panjang]) > 0
+                    const validWid = typeof row[idx.lebar] === 'number' || parseFloat(row[idx.lebar]) > 0
+
+                    if (!validLen && !validWid) {
+                        // Might be a header row or just name row
+                        if (colAnchor && !colAnchor.includes('NO.') && !colAnchor.includes('WILAYAH')) {
+                            lastNamaDermaga = colAnchor
+                        }
+                        return null
+                    }
+
+                    // Name resolution
+                    let displayNama = lastNamaDermaga
+                    const valKonstruksi = idx.konstruksi > -1 ? (row[idx.konstruksi] ? String(row[idx.konstruksi]).trim() : '') : ''
+
+                    if (colAnchor) displayNama = colAnchor
+                    else if (valKonstruksi.startsWith('-') || valKonstruksi.startsWith('–')) {
+                        displayNama = `${lastNamaDermaga} ${valKonstruksi}`
+                    }
+
+                    const parseNum = (val) => {
+                        if (typeof val === 'number') return val
+                        if (!val || val === '-') return 0
+                        const clean = String(val).replace(/,/g, '').trim()
+                        return parseFloat(clean) || 0
+                    }
 
                     return {
-                        lantamal: lastLantamal || '',
-                        lanal_faslan: lastFaslan || '',
-                        lokasi_dermaga: getValue(row, ['Alamat', 'Lokasi Dermaga']) || '',
-                        nama_dermaga: getValue(row, ['NAMA DERMAGA', 'Nama Dermaga', 'Nama']) || 'Tanpa Nama',
-                        jenis_dermaga: getValue(row, ['Jenis Dermaga', 'Jenis']) || '',
-                        panjang_m: parseFloat(getValue(row, ['Panjang', 'Panjang (m)'])) || 0,
-                        lebar_m: parseFloat(getValue(row, ['Lebar', 'Lebar (m)'])) || 0,
-                        kedalaman_m: parseFloat(getValue(row, ['Kedalaman (m)', 'Kedalaman'])) || 0,
-                        luas_m2: parseFloat(getValue(row, ['Luas (m²)', 'Luas'])) || 0,
-                        konstruksi: getValue(row, ['KONSTRUKSI, TYPE, BENTUK & TIANG PANCANG DERMAGA', 'Konstruksi']) || '',
-                        tahun_pembangunan: parseInt(getValue(row, ['Tahun Pembangunan', 'Tahun'])) || null,
-                        kapasitas_kapal: getValue(row, ['Tipe Kapal', 'Kapasitas Kapal']) || '',
-                        tonase_max: parseFloat(getValue(row, ['Berat Sandar Maks', 'Tonase Max'])) || 0,
-                        jumlah_tambat: parseInt(getValue(row, ['Jumlah Tambat'])) || 0,
-                        panjang_tambat_m: parseFloat(getValue(row, ['Panjang Tambat (m)', 'Panjang Tambat'])) || 0,
-                        kondisi_dermaga: getValue(row, ['KONDISI (%)', 'Kondisi']) || 'Baik',
-                        kondisi_lantai: getValue(row, ['Kondisi Lantai']) || 'Baik',
-                        kondisi_dinding: getValue(row, ['Kondisi Dinding']) || 'Baik',
-                        kondisi_fender: getValue(row, ['Kondisi Fender']) || 'Baik',
-                        bollard: parseInt(getValue(row, ['Bollard (unit)', 'Bollard'])) || 0,
-                        fender: parseInt(getValue(row, ['Jumlah Fender', 'Fender'])) || 0,
-                        tangga_kapal: parseInt(getValue(row, ['Tangga Kapal (unit)', 'Tangga Kapal'])) || 0,
-                        lampu_dermaga: parseInt(getValue(row, ['Lampu Dermaga (unit)', 'Lampu Dermaga', 'Lampu'])) || 0,
-                        air_bersih: String(getValue(row, ['SUMBER', 'Air Bersih'])).match(/PDAM|Sumur|Ya|Ada/i) !== null,
-                        listrik: String(getValue(row, ['SUMBER', 'Listrik', 'Daya'])).match(/PLN|Genset|Ya|Ada/i) !== null,
-                        bbm: String(getValue(row, ['BBM', 'Kap BBM'])).match(/Ya|Ada|[0-9]/i) !== null,
-                        crane: String(getValue(row, ['Crane'])).match(/ya|ada/i) !== null,
-                        elevasi_m: parseFloat(getValue(row, ['Elevasi (m)', 'Elevasi'])) || 0,
-                        draft_m: parseFloat(getValue(row, ['DRAFT pada LWS (m)', 'Draft'])) || 0,
-                        lebar_apron_m: parseFloat(getValue(row, ['Lebar Apron (m)', 'Lebar Apron'])) || 0,
-                        panjang_apron_m: parseFloat(getValue(row, ['Panjang Apron (m)', 'Panjang Apron'])) || 0,
-                        fungsi_dermaga: getValue(row, ['Fungsi Dermaga', 'Fungsi']) || '',
-                        keterangan: getValue(row, ['Keterangan', 'Ket']) || '',
-                        status_operasional: getValue(row, ['Status Operasional', 'Status']) || 'Aktif',
-                        longitude: parseFloat(getValue(row, ['Longitude', 'Long'])) || null,
-                        latitude: parseFloat(getValue(row, ['Latitude', 'Lat'])) || null
+                        _rowNumber: rowNum,
+                        provinsi: '',
+                        wilayah: lastWilayah || 'Unknown',
+                        lokasi: lastLokasi || '',
+                        lon: idx.longitude > -1 ? row[idx.longitude] : '',
+                        lat: idx.latitude > -1 ? row[idx.latitude] : '',
+                        nama_dermaga: displayNama || 'Unnamed Dermaga',
+                        konstruksi: !valKonstruksi.startsWith('-') ? valKonstruksi : '',
+
+                        panjang_m: parseNum(row[idx.panjang]),
+                        lebar_m: parseNum(row[idx.lebar]),
+                        luas_m2: parseNum(row[idx.panjang]) * parseNum(row[idx.lebar]),
+                        draft_lwl_m: parseNum(row[idx.draft]),
+                        pasut_hwl_lwl_m: parseNum(row[idx.pasut]),
+                        kondisi_percent: parseNum(row[idx.kondisi]),
+
+                        displacement_kri: idx.sandarKri > -1 ? row[idx.sandarKri] : '',
+                        berat_sandar_maks_ton: idx.sandarTon > -1 ? parseNum(row[idx.sandarTon]) : 0,
+                        tipe_kapal: idx.tipeKapal > -1 ? row[idx.tipeKapal] : '',
+                        jumlah_maks: idx.sandarJml > -1 ? parseInt(row[idx.sandarJml]) || 0 : 0,
+
+                        kemampuan_plat_lantai_ton: idx.platTon > -1 ? parseNum(row[idx.platTon]) : 0,
+                        jenis_ranmor: idx.ranmorJenis > -1 ? row[idx.ranmorJenis] : '',
+                        berat_ranmor_ton: idx.ranmorTon > -1 ? parseNum(row[idx.ranmorTon]) : 0,
+
+                        titik_sambung_listrik: idx.listrikTitik > -1 ? parseInt(row[idx.listrikTitik]) || 0 : 0,
+                        kapasitas_a: idx.listrikAmp > -1 ? parseNum(row[idx.listrikAmp]) : 0,
+                        tegangan_v: idx.listrikVolt > -1 ? parseNum(row[idx.listrikVolt]) : 220,
+                        frek_hz: idx.listrikHz > -1 ? parseNum(row[idx.listrikHz]) : 50,
+                        sumber_listrik: idx.listrikSumber > -1 ? row[idx.listrikSumber] : '',
+                        daya_kva: idx.listrikKva > -1 ? parseNum(row[idx.listrikKva]) : 0,
+
+                        kapasitas_air_gwt_m3: idx.airGwt > -1 ? parseNum(row[idx.airGwt]) : 0,
+                        debit_air_m3_jam: idx.airDebit > -1 ? parseNum(row[idx.airDebit]) : 0,
+                        sumber_air: idx.airSumber > -1 ? row[idx.airSumber] : '',
+
+                        kapasitas_bbm: idx.bbm > -1 ? row[idx.bbm] : '',
+                        hydrant: idx.hydrant > -1 ? row[idx.hydrant] : '',
+                        keterangan: idx.ket > -1 ? row[idx.ket] : ''
                     }
-                })
 
-                console.log('Sending to API...')
-                // Bulk insert
-                const response = await fetch('/api/faslabuh/bulk-import', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ data: mappedData })
-                })
+                }).filter(item => item !== null)
 
-                const result = await response.json()
-
-                if (!response.ok) {
-                    throw new Error(result.error || 'Import failed')
+                if (mappedData.length === 0) {
+                    alert('❌ Tidak ada data valid yang ditemukan! Pastikan format kolom sesuai.')
+                    return
                 }
 
-                console.log('Import result:', result)
-
-                let message = `Proses Selesai.\nTotal: ${result.total}\nBerhasil: ${result.inserted}\nUpdate: ${result.updated}\nGagal: ${result.failed}`
-
-                if (result.failed > 0) {
-                    if (result.errors && result.errors.length > 0) {
-                        const sampleErr = result.errors[0]
-                        message += `\n\nContoh Error (Baris ${sampleErr.row}, ${sampleErr.nama_dermaga}):\n${sampleErr.error}`
-                        console.error('Detail Error Import:', result.errors)
-                    }
-                    alert('⚠️ ' + message)
-                } else {
-                    alert('✅ ' + message)
-                }
-
-                fetchData()
+                setPreviewData(mappedData)
+                setShowPreview(true)
+                alert(`✅ File berhasil dibaca (Smart Detect)!\nFound: ${mappedData.length} records.`)
             } catch (error) {
-                console.error('Import process error:', error)
-                alert('❌ Import gagal: ' + error.message)
-            } finally {
-                e.target.value = '' // Reset input
+                console.error('Error reading file:', error)
+                alert('❌ Gagal membaca file Excel: ' + error.message)
             }
         }
+        reader.readAsBinaryString(file)
+        e.target.value = '' // Reset input
+    }
 
-        reader.readAsArrayBuffer(file)
+    const handleImportToDatabase = async () => {
+        if (previewData.length === 0) {
+            alert('❌ Tidak ada data untuk diimport!')
+            return
+        }
+
+        const modeText = {
+            'upsert': 'Upsert (Tambah & Update)',
+            'insert-only': 'Insert Only (Hanya Tambah Baru)',
+            'update-only': 'Update Only (Hanya Update Existing)'
+        }
+
+        if (!confirm(`⚠️ Import ${previewData.length} data dengan mode: ${modeText[importMode]}?\n\nProses ini tidak bisa dibatalkan!`)) {
+            return
+        }
+
+        setImporting(true)
+        setImportProgress(0)
+
+        try {
+            const response = await fetch('/api/faslabuh/bulk-import', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    data: previewData,
+                    mode: importMode
+                })
+            })
+
+            if (!response.ok) {
+                const error = await response.json()
+                throw new Error(error.details || error.error || 'Import failed')
+            }
+
+            const result = await response.json()
+
+            let message = `✅ Import Selesai!\n\n`
+            message += `📊 Total: ${result.total}\n`
+            message += `✅ Berhasil ditambah: ${result.inserted}\n`
+            message += `🔄 Berhasil diupdate: ${result.updated}\n`
+            message += `❌ Gagal: ${result.failed}\n`
+
+            if (result.errors && result.errors.length > 0) {
+                message += `\n⚠️ Error Details:\n`
+                result.errors.slice(0, 5).forEach(err => {
+                    message += `- Baris ${err.row}: ${err.error}\n`
+                })
+                if (result.errors.length > 5) {
+                    message += `... dan ${result.errors.length - 5} error lainnya\n`
+                }
+            }
+
+            alert(message)
+            setShowPreview(false)
+            setPreviewData([])
+            fetchData() // Refresh data
+        } catch (error) {
+            console.error('Import error:', error)
+            alert('❌ Import gagal: ' + error.message)
+        } finally {
+            setImporting(false)
+            setImportProgress(0)
+        }
+    }
+
+    const handleDeleteAll = async () => {
+        if (!confirm('⚠️ PERINGATAN!\n\nHapus SEMUA data faslabuh?\n\nProses ini TIDAK BISA dibatalkan!')) {
+            return
+        }
+
+        if (!confirm('⚠️ KONFIRMASI TERAKHIR!\n\nAnda yakin ingin menghapus SEMUA data?')) {
+            return
+        }
+
+        try {
+            const response = await fetch('/api/faslabuh/delete-all', {
+                method: 'DELETE'
+            })
+
+            if (!response.ok) throw new Error('Failed to delete')
+
+            alert('✅ Semua data berhasil dihapus!')
+            fetchData()
+        } catch (error) {
+            console.error('Error:', error)
+            alert('❌ Gagal menghapus data: ' + error.message)
+        }
     }
 
     const updateField = (field, value) => {
-        setSelectedItem(prev => ({ ...prev, [field]: value }))
+        // Reset wilayah saat provinsi berubah
+        if (field === 'provinsi') {
+            setSelectedItem(prev => ({ ...prev, [field]: value, wilayah: '' }))
+        } else {
+            setSelectedItem(prev => ({ ...prev, [field]: value }))
+        }
     }
 
     return (
-        <div style={{ fontFamily: FONT_SYSTEM }}>
+        <div className="fade-in" style={{ fontFamily: FONT_SYSTEM }}>
+            {/* Header */}
             <div style={{ marginBottom: '20px' }}>
                 <h1 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#0f172a', margin: 0 }}>Faslabuh</h1>
                 <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '4px 0 0 0' }}>Fasilitas Pelabuhan & Dermaga</p>
             </div>
 
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                <button onClick={handleAddNew} style={{ background: '#003366', color: 'white', border: 'none', borderRadius: '4px', padding: '6px 12px', fontSize: '0.8rem', cursor: 'pointer' }}>
-                    + Tambah
-                </button>
-                <input ref={fileInputRef} type="file" style={{ display: 'none' }} accept=".xlsx" onChange={handleImport} />
-                <button onClick={() => fileInputRef.current?.click()} style={{ background: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', padding: '6px 12px', fontSize: '0.8rem', cursor: 'pointer' }}>
-                    📂 Import Excel
-                </button>
-                <button onClick={handleExportTemplate} style={{ background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', padding: '6px 12px', fontSize: '0.8rem', cursor: 'pointer' }}>
-                    📋 Download Template
-                </button>
-                <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: '#64748b', padding: '6px 0' }}>
+            {/* Actions Bar */}
+            <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '10px 12px',
+                background: '#f8fafc',
+                borderRadius: '6px',
+                marginBottom: '12px',
+                border: '1px solid #e2e8f0'
+            }}>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <button onClick={handleAddNew} style={{
+                        background: '#003366',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        padding: '6px 12px',
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        fontFamily: FONT_SYSTEM
+                    }}>
+                        + Tambah
+                    </button>
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        style={{ display: 'none' }}
+                        accept=".xlsx, .xls"
+                        onChange={handleFileUpload}
+                    />
+                    <button onClick={() => fileInputRef.current?.click()} style={{
+                        background: '#3b82f6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        padding: '6px 12px',
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        fontFamily: FONT_SYSTEM
+                    }}>
+                        📂 Import Excel
+                    </button>
+                    <button onClick={handleExport} style={{
+                        background: 'white',
+                        color: '#475569',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '4px',
+                        padding: '6px 12px',
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        fontFamily: FONT_SYSTEM
+                    }}>
+                        📤 Export
+                    </button>
+                    <button onClick={handleExportTemplate} style={{
+                        background: '#10b981',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        padding: '6px 12px',
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        fontFamily: FONT_SYSTEM
+                    }}>
+                        📋 Export Template
+                    </button>
+                    <button onClick={handleDeleteAll} style={{
+                        background: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        padding: '6px 12px',
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        fontFamily: FONT_SYSTEM
+                    }}>
+                        🗑️ Delete All
+                    </button>
+                </div>
+                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
                     Total: <strong>{data.length}</strong> Dermaga
                 </span>
             </div>
 
+            {/* Loading State */}
             {loading ? (
-                <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>⏳ Memuat data...</div>
-            ) : (
-                <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px', overflow: 'hidden' }}>
-                    <div style={{ overflowX: 'auto', maxHeight: 'calc(100vh - 250px)' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
-                            <thead>
-                                <tr style={{ background: '#003366', color: 'white' }}>
-                                    <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 10 }}>Lantamal</th>
-                                    <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 10 }}>Lanal/Faslan</th>
-                                    <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 10 }}>Nama Dermaga</th>
-                                    <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 10 }}>Lokasi</th>
-                                    <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 10 }}>Konstruksi</th>
-                                    <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 10 }}>Panjang (m)</th>
-                                    <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 10 }}>Lebar (m)</th>
-                                    <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 10 }}>Kondisi</th>
-                                    <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 10 }}>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {data.map((item, index) => (
-                                    <tr
-                                        key={item.id}
-                                        onClick={() => handleRowClick(item)}
-                                        style={{ background: index % 2 === 0 ? '#ffffff' : '#f8fafc', cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}
-                                        onMouseEnter={(e) => e.currentTarget.style.background = '#e0f2fe'}
-                                        onMouseLeave={(e) => e.currentTarget.style.background = index % 2 === 0 ? '#ffffff' : '#f8fafc'}
-                                    >
-                                        <td style={{ padding: '6px 10px', color: '#475569' }}>{item.lantamal}</td>
-                                        <td style={{ padding: '6px 10px', color: '#475569' }}>{item.lanal_faslan}</td>
-                                        <td style={{ padding: '6px 10px', fontWeight: '600', color: '#003366' }}>{item.nama_dermaga}</td>
-                                        <td style={{ padding: '6px 10px', color: '#334155' }}>{item.lokasi_dermaga}</td>
-                                        <td style={{ padding: '6px 10px', color: '#334155' }}>{item.konstruksi}</td>
-                                        <td style={{ padding: '6px 10px', textAlign: 'right' }}>{item.panjang_m}</td>
-                                        <td style={{ padding: '6px 10px', textAlign: 'right' }}>{item.lebar_m}</td>
-                                        <td style={{ padding: '6px 10px', textAlign: 'center' }}>
-                                            <span style={{
-                                                padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '600',
-                                                background: item.kondisi_dermaga === 'Baik' ? '#dcfce7' : item.kondisi_dermaga === 'Rusak Ringan' ? '#fef3c7' : '#fee2e2',
-                                                color: item.kondisi_dermaga === 'Baik' ? '#15803d' : item.kondisi_dermaga === 'Rusak Ringan' ? '#b45309' : '#dc2626'
-                                            }}>
-                                                {item.kondisi_dermaga}
-                                            </span>
-                                        </td>
-                                        <td style={{ padding: '6px 10px', textAlign: 'center' }}>
-                                            <span style={{
-                                                padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '600',
-                                                background: item.status_operasional === 'Aktif' ? '#dbeafe' : '#f3f4f6',
-                                                color: item.status_operasional === 'Aktif' ? '#1e40af' : '#6b7280'
-                                            }}>
-                                                {item.status_operasional}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                <div style={{
+                    padding: '40px',
+                    textAlign: 'center',
+                    color: '#64748b',
+                    fontSize: '0.9rem'
+                }}>
+                    ⏳ Memuat data...
                 </div>
+            ) : (
+                <>
+                    {/* Table - Compact Modern 2026 */}
+                    <div style={{
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '6px',
+                        overflow: 'hidden'
+                    }}>
+                        <div style={{
+                            overflowX: 'auto',
+                            overflowY: 'auto',
+                            maxHeight: 'calc(100vh - 250px)'
+                        }}>
+                            <table style={{
+                                width: '100%',
+                                borderCollapse: 'collapse',
+                                fontSize: '0.75rem'
+                            }}>
+                                <thead>
+                                    <tr style={{ background: '#003366', color: 'white' }}>
+                                        <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '600', fontSize: '0.7rem', width: '40px' }}>No</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem' }}>Lokasi</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem' }}>Wilayah</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '600', fontSize: '0.7rem' }}>Lon/Lat</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem' }}>Nama Dermaga</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem' }}>Konstruksi</th>
+
+                                        {/* Dimensi */}
+                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>P (m)</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>L (m)</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>Luas (m²)</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>Draft (m)</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>Pasut (m)</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '600', fontSize: '0.7rem' }}>Kondisi</th>
+
+                                        {/* Kapabilitas */}
+                                        <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem' }}>Disp KRI</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>Max Sandar (t)</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem' }}>Tipe Kapal</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>Jml Max</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>Plat (t)</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem' }}>Ranmor</th>
+
+                                        {/* Listrik */}
+                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>Titik Listrik</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>Kap (A)</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>Volt</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>Hz</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>Daya (kVA)</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem' }}>Sumber Listrik</th>
+
+                                        {/* Air & BBM */}
+                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>GWT (m³)</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem' }}>Debit (m³/jam)</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem' }}>Sumber Air</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem' }}>BBM</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem' }}>Hydrant</th>
+                                        <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem' }}>Ket</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {data.map((item, index) => {
+                                        return (
+                                            <tr
+                                                key={item.id}
+                                                onClick={() => handleRowClick(item)}
+                                                style={{
+                                                    background: index % 2 === 0 ? '#ffffff' : '#f8fafc',
+                                                    cursor: 'pointer',
+                                                    borderBottom: '1px solid #f1f5f9'
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.background = '#e0f2fe'}
+                                                onMouseLeave={(e) => e.currentTarget.style.background = index % 2 === 0 ? '#ffffff' : '#f8fafc'}
+                                            >
+                                                <td style={{ padding: '6px 10px', textAlign: 'center', color: '#64748b' }}>{index + 1}</td>
+                                                <td style={{ padding: '6px 10px', color: '#334155' }}>{item.lokasi}</td>
+                                                <td style={{ padding: '6px 10px', color: '#334155' }}>{item.wilayah}</td>
+                                                <td style={{ padding: '6px 10px', textAlign: 'center', fontFamily: FONT_MONO, fontSize: '0.65rem', color: '#64748b' }}>
+                                                    {item.lat && item.lon ? `${item.lat}, ${item.lon}` : '-'}
+                                                </td>
+                                                <td style={{ padding: '6px 10px', fontWeight: '600', color: '#003366' }}>{item.nama_dermaga}</td>
+                                                <td style={{ padding: '6px 10px', color: '#334155' }}>{item.konstruksi}</td>
+
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.panjang_m}</td>
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.lebar_m}</td>
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.luas_m2}</td>
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.draft_lwl_m}</td>
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.pasut_hwl_lwl_m}</td>
+                                                <td style={{ padding: '6px 10px', textAlign: 'center' }}>
+                                                    <span style={{
+                                                        padding: '2px 8px',
+                                                        borderRadius: '4px',
+                                                        fontSize: '0.7rem',
+                                                        fontWeight: '600',
+                                                        background: item.kondisi_percent > 70 ? '#dcfce7' : '#fef3c7',
+                                                        color: item.kondisi_percent > 70 ? '#15803d' : '#b45309'
+                                                    }}>
+                                                        {item.kondisi_percent}%
+                                                    </span>
+                                                </td>
+
+                                                <td style={{ padding: '6px 10px', fontSize: '0.7rem', color: '#334155' }}>{item.displacement_kri}</td>
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.berat_sandar_maks_ton}</td>
+                                                <td style={{ padding: '6px 10px', fontSize: '0.7rem', color: '#334155' }}>{item.tipe_kapal}</td>
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.jumlah_maks}</td>
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.kemampuan_plat_lantai_ton}</td>
+                                                <td style={{ padding: '6px 10px', fontSize: '0.7rem', color: '#334155' }}>
+                                                    {item.jenis_ranmor ? `${item.jenis_ranmor} (${item.berat_ranmor_ton}t)` : '-'}
+                                                </td>
+
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.titik_sambung_listrik}</td>
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.kapasitas_a}</td>
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.tegangan_v}</td>
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.frek_hz}</td>
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.daya_kva}</td>
+                                                <td style={{ padding: '6px 10px', fontSize: '0.7rem', color: '#334155' }}>{item.sumber_listrik}</td>
+
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.kapasitas_air_gwt_m3}</td>
+                                                <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: FONT_MONO }}>{item.debit_air_m3_jam}</td>
+                                                <td style={{ padding: '6px 10px', fontSize: '0.7rem', color: '#334155' }}>{item.sumber_air}</td>
+                                                <td style={{ padding: '6px 10px', fontSize: '0.7rem', color: '#334155' }}>{item.kapasitas_bbm}</td>
+                                                <td style={{ padding: '6px 10px', fontSize: '0.7rem', color: '#334155' }}>{item.hydrant}</td>
+                                                <td style={{ padding: '6px 10px', fontSize: '0.7rem', color: '#334155' }}>{item.keterangan}</td>
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Modal - Modern 2026 No Box */}
+                    {isModalOpen && selectedItem && (
+                        <div style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            background: 'rgba(0, 0, 0, 0.5)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 1000,
+                            padding: '20px'
+                        }} onClick={handleCancel}>
+                            <div style={{
+                                background: 'white',
+                                borderRadius: '12px',
+                                maxWidth: '1200px',
+                                width: '100%',
+                                maxHeight: '90vh',
+                                overflowY: 'auto',
+                                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+                            }} onClick={e => e.stopPropagation()}>
+
+                                {/* Header */}
+                                <div style={{
+                                    padding: '20px 24px',
+                                    borderBottom: '1px solid #e2e8f0',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    position: 'sticky',
+                                    top: 0,
+                                    background: 'white',
+                                    zIndex: 10
+                                }}>
+                                    <div>
+                                        <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700', color: '#0f172a' }}>
+                                            {isEditMode ? '✏️ Edit Data Faslabuh' : selectedItem.nama_dermaga}
+                                        </h2>
+                                        <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                                            {selectedItem.lokasi} • {selectedItem.provinsi}
+                                        </p>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                        {isEditMode && (
+                                            <>
+                                                <button onClick={handleSave} style={{
+                                                    background: '#10b981',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '6px',
+                                                    padding: '6px 14px',
+                                                    fontSize: '0.8rem',
+                                                    cursor: 'pointer',
+                                                    fontFamily: FONT_SYSTEM
+                                                }}>
+                                                    💾 Simpan
+                                                </button>
+                                                <button onClick={handleCancel} style={{
+                                                    background: '#6b7280',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '6px',
+                                                    padding: '6px 14px',
+                                                    fontSize: '0.8rem',
+                                                    cursor: 'pointer',
+                                                    fontFamily: FONT_SYSTEM
+                                                }}>
+                                                    ✕ Batal
+                                                </button>
+                                                <button onClick={() => handleDelete(selectedItem.id)} style={{
+                                                    background: '#ef4444',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '6px',
+                                                    padding: '6px 14px',
+                                                    fontSize: '0.8rem',
+                                                    cursor: 'pointer',
+                                                    fontFamily: FONT_SYSTEM
+                                                }}>
+                                                    🗑️ Hapus
+                                                </button>
+                                            </>
+                                        )}
+                                        <button onClick={handleCancel} style={{
+                                            background: 'none',
+                                            border: 'none',
+                                            fontSize: '24px',
+                                            cursor: 'pointer',
+                                            color: '#94a3b8'
+                                        }}>
+                                            ×
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Content - No Boxes, Clean Lines */}
+                                <form onSubmit={handleSave} style={{ padding: '24px' }}>
+
+                                    {/* Section 1: Identitas & Lokasi */}
+                                    <div style={{ marginBottom: '24px' }}>
+                                        <h3 style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a', marginBottom: '12px', paddingBottom: '6px', borderBottom: '2px solid #e2e8f0' }}>
+                                            Identitas & Lokasi
+                                        </h3>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>Lokasi</label>
+                                                {isEditMode ? (
+                                                    <input value={selectedItem.lokasi ?? ''} onChange={e => updateField('lokasi', e.target.value)} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_SYSTEM }} />
+                                                ) : (
+                                                    <div style={{ padding: '6px 0', fontSize: '0.9rem', color: '#0f172a', fontWeight: '500' }}>{selectedItem.lokasi || '-'}</div>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>Wilayah</label>
+                                                {isEditMode ? (
+                                                    <input value={selectedItem.wilayah ?? ''} onChange={e => updateField('wilayah', e.target.value)} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_SYSTEM }} />
+                                                ) : (
+                                                    <div style={{ padding: '6px 0', fontSize: '0.9rem', color: '#0f172a' }}>{selectedItem.wilayah || '-'}</div>
+                                                )}
+                                            </div>
+                                            <div style={{ gridColumn: 'span 2' }}>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>Nama Dermaga</label>
+                                                {isEditMode ? (
+                                                    <input value={selectedItem.nama_dermaga ?? ''} onChange={e => updateField('nama_dermaga', e.target.value)} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_SYSTEM }} />
+                                                ) : (
+                                                    <div style={{ padding: '6px 0', fontSize: '1rem', color: '#0f172a', fontWeight: '700' }}>{selectedItem.nama_dermaga || '-'}</div>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>Longitude</label>
+                                                {isEditMode ? (
+                                                    <input type="number" step="any" value={selectedItem.lon ?? ''} onChange={e => updateField('lon', e.target.value)} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_MONO }} />
+                                                ) : (
+                                                    <div style={{ padding: '6px 0', fontSize: '0.85rem', color: '#0f172a', fontFamily: FONT_MONO }}>{selectedItem.lon || '-'}</div>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>Latitude</label>
+                                                {isEditMode ? (
+                                                    <input type="number" step="any" value={selectedItem.lat ?? ''} onChange={e => updateField('lat', e.target.value)} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_MONO }} />
+                                                ) : (
+                                                    <div style={{ padding: '6px 0', fontSize: '0.85rem', color: '#0f172a', fontFamily: FONT_MONO }}>{selectedItem.lat || '-'}</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Section 2: Dimensi & Konstruksi */}
+                                    <div style={{ marginBottom: '24px' }}>
+                                        <h3 style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a', marginBottom: '12px', paddingBottom: '6px', borderBottom: '2px solid #e2e8f0' }}>
+                                            Dimensi & Konstruksi
+                                        </h3>
+                                        <div style={{ marginBottom: '12px' }}>
+                                            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>Konstruksi</label>
+                                            {isEditMode ? (
+                                                <input value={selectedItem.konstruksi ?? ''} onChange={e => updateField('konstruksi', e.target.value)} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_SYSTEM }} />
+                                            ) : (
+                                                <div style={{ padding: '6px 0', fontSize: '0.85rem', color: '#0f172a' }}>{selectedItem.konstruksi || '-'}</div>
+                                            )}
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px' }}>
+                                            {[
+                                                { label: 'Panjang (m)', field: 'panjang_m' },
+                                                { label: 'Lebar (m)', field: 'lebar_m' },
+                                                { label: 'Luas (m²)', field: 'luas_m2', readonly: true, value: (parseFloat(selectedItem.panjang_m) || 0) * (parseFloat(selectedItem.lebar_m) || 0) },
+                                                { label: 'Draft LWL (m)', field: 'draft_lwl_m' },
+                                                { label: 'Pasut HWL-LWL (m)', field: 'pasut_hwl_lwl_m' },
+                                                { label: 'Kondisi (%)', field: 'kondisi_percent' }
+                                            ].map(({ label, field, readonly, value }) => (
+                                                <div key={field}>
+                                                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>{label}</label>
+                                                    {isEditMode && !readonly ? (
+                                                        <input type="number" step="any" value={selectedItem[field] ?? ''} onChange={e => updateField(field, e.target.value)} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_MONO }} />
+                                                    ) : (
+                                                        <div style={{ padding: '6px 0', fontSize: '0.85rem', color: '#0f172a', fontFamily: FONT_MONO }}>{value !== undefined ? value : selectedItem[field] || '-'}</div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Section 3: Kemampuan Sandar & Kapal */}
+                                    <div style={{ marginBottom: '24px' }}>
+                                        <h3 style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a', marginBottom: '12px', paddingBottom: '6px', borderBottom: '2px solid #e2e8f0' }}>
+                                            Kemampuan Sandar & Kapal
+                                        </h3>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>Displacement KRI</label>
+                                                {isEditMode ? (
+                                                    <input value={selectedItem.displacement_kri ?? ''} onChange={e => updateField('displacement_kri', e.target.value)} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_SYSTEM }} />
+                                                ) : (
+                                                    <div style={{ padding: '6px 0', fontSize: '0.85rem', color: '#0f172a' }}>{selectedItem.displacement_kri || '-'}</div>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>Berat Sandar Maks (ton)</label>
+                                                {isEditMode ? (
+                                                    <input type="number" step="any" value={selectedItem.berat_sandar_maks_ton ?? ''} onChange={e => updateField('berat_sandar_maks_ton', e.target.value)} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_MONO }} />
+                                                ) : (
+                                                    <div style={{ padding: '6px 0', fontSize: '0.85rem', color: '#0f172a', fontFamily: FONT_MONO }}>{selectedItem.berat_sandar_maks_ton || '-'}</div>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>Tipe Kapal</label>
+                                                {isEditMode ? (
+                                                    <input value={selectedItem.tipe_kapal ?? ''} onChange={e => updateField('tipe_kapal', e.target.value)} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_SYSTEM }} />
+                                                ) : (
+                                                    <div style={{ padding: '6px 0', fontSize: '0.85rem', color: '#0f172a' }}>{selectedItem.tipe_kapal || '-'}</div>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>Jumlah Maks</label>
+                                                {isEditMode ? (
+                                                    <input type="number" value={selectedItem.jumlah_maks ?? ''} onChange={e => updateField('jumlah_maks', e.target.value)} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_MONO }} />
+                                                ) : (
+                                                    <div style={{ padding: '6px 0', fontSize: '0.85rem', color: '#0f172a', fontFamily: FONT_MONO }}>{selectedItem.jumlah_maks || '-'}</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Section 4: Fasilitas Darat (Plat & Ranmor) */}
+                                    <div style={{ marginBottom: '24px' }}>
+                                        <h3 style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a', marginBottom: '12px', paddingBottom: '6px', borderBottom: '2px solid #e2e8f0' }}>
+                                            Fasilitas Darat
+                                        </h3>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>Kemampuan Plat (ton)</label>
+                                                {isEditMode ? (
+                                                    <input type="number" step="any" value={selectedItem.kemampuan_plat_lantai_ton ?? ''} onChange={e => updateField('kemampuan_plat_lantai_ton', e.target.value)} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_MONO }} />
+                                                ) : (
+                                                    <div style={{ padding: '6px 0', fontSize: '0.85rem', color: '#0f172a', fontFamily: FONT_MONO }}>{selectedItem.kemampuan_plat_lantai_ton || '-'}</div>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>Jenis Ranmor</label>
+                                                {isEditMode ? (
+                                                    <input value={selectedItem.jenis_ranmor ?? ''} onChange={e => updateField('jenis_ranmor', e.target.value)} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_SYSTEM }} />
+                                                ) : (
+                                                    <div style={{ padding: '6px 0', fontSize: '0.85rem', color: '#0f172a' }}>{selectedItem.jenis_ranmor || '-'}</div>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>Berat Ranmor (ton)</label>
+                                                {isEditMode ? (
+                                                    <input type="number" step="any" value={selectedItem.berat_ranmor_ton ?? ''} onChange={e => updateField('berat_ranmor_ton', e.target.value)} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_MONO }} />
+                                                ) : (
+                                                    <div style={{ padding: '6px 0', fontSize: '0.85rem', color: '#0f172a', fontFamily: FONT_MONO }}>{selectedItem.berat_ranmor_ton || '-'}</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Section 5: Listrik */}
+                                    <div style={{ marginBottom: '24px' }}>
+                                        <h3 style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a', marginBottom: '12px', paddingBottom: '6px', borderBottom: '2px solid #e2e8f0' }}>
+                                            Listrik
+                                        </h3>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px' }}>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>Titik Sambung</label>
+                                                {isEditMode ? (
+                                                    <input type="number" value={selectedItem.titik_sambung_listrik ?? ''} onChange={e => updateField('titik_sambung_listrik', e.target.value)} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_MONO }} />
+                                                ) : (
+                                                    <div style={{ padding: '6px 0', fontSize: '0.85rem', color: '#0f172a', fontFamily: FONT_MONO }}>{selectedItem.titik_sambung_listrik || '-'}</div>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>Kapasitas (A)</label>
+                                                {isEditMode ? (
+                                                    <input type="number" value={selectedItem.kapasitas_a ?? ''} onChange={e => updateField('kapasitas_a', e.target.value)} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_MONO }} />
+                                                ) : (
+                                                    <div style={{ padding: '6px 0', fontSize: '0.85rem', color: '#0f172a', fontFamily: FONT_MONO }}>{selectedItem.kapasitas_a || '-'}</div>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>Tegangan (V)</label>
+                                                {isEditMode ? (
+                                                    <select value={selectedItem.tegangan_v ?? 220} onChange={e => updateField('tegangan_v', parseInt(e.target.value))} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_MONO }}>
+                                                        {OPTIONS.tegangan.map(v => <option key={v} value={v}>{v}</option>)}
+                                                    </select>
+                                                ) : (
+                                                    <div style={{ padding: '6px 0', fontSize: '0.85rem', color: '#0f172a', fontFamily: FONT_MONO }}>{selectedItem.tegangan_v || '-'}</div>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>Frek (Hz)</label>
+                                                {isEditMode ? (
+                                                    <select value={selectedItem.frek_hz ?? 50} onChange={e => updateField('frek_hz', parseInt(e.target.value))} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_MONO }}>
+                                                        {OPTIONS.frekuensi.map(f => <option key={f} value={f}>{f}</option>)}
+                                                    </select>
+                                                ) : (
+                                                    <div style={{ padding: '6px 0', fontSize: '0.85rem', color: '#0f172a', fontFamily: FONT_MONO }}>{selectedItem.frek_hz || '-'}</div>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>Sumber</label>
+                                                {isEditMode ? (
+                                                    <select value={selectedItem.sumber_listrik ?? 'PLN'} onChange={e => updateField('sumber_listrik', e.target.value)} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
+                                                        {OPTIONS.sumber_listrik.map(s => <option key={s} value={s}>{s}</option>)}
+                                                    </select>
+                                                ) : (
+                                                    <div style={{ padding: '6px 0', fontSize: '0.85rem', color: '#0f172a' }}>{selectedItem.sumber_listrik || '-'}</div>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>Daya (kVA)</label>
+                                                {isEditMode ? (
+                                                    <input type="number" step="any" value={selectedItem.daya_kva ?? ''} onChange={e => updateField('daya_kva', e.target.value)} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_MONO }} />
+                                                ) : (
+                                                    <div style={{ padding: '6px 0', fontSize: '0.85rem', color: '#0f172a', fontFamily: FONT_MONO }}>{selectedItem.daya_kva || '-'}</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Section 6: Air, BBM & Lainnya */}
+                                    <div style={{ marginBottom: '24px' }}>
+                                        <h3 style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a', marginBottom: '12px', paddingBottom: '6px', borderBottom: '2px solid #e2e8f0' }}>
+                                            Air, BBM & Kelengkapan
+                                        </h3>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px' }}>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>Air GWT (m³)</label>
+                                                {isEditMode ? (
+                                                    <input type="number" step="any" value={selectedItem.kapasitas_air_gwt_m3 ?? ''} onChange={e => updateField('kapasitas_air_gwt_m3', e.target.value)} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_MONO }} />
+                                                ) : (
+                                                    <div style={{ padding: '6px 0', fontSize: '0.85rem', color: '#0f172a', fontFamily: FONT_MONO }}>{selectedItem.kapasitas_air_gwt_m3 || '-'}</div>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>Debit Air (m³/jam)</label>
+                                                {isEditMode ? (
+                                                    <input type="number" step="any" value={selectedItem.debit_air_m3_jam ?? ''} onChange={e => updateField('debit_air_m3_jam', e.target.value)} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_MONO }} />
+                                                ) : (
+                                                    <div style={{ padding: '6px 0', fontSize: '0.85rem', color: '#0f172a', fontFamily: FONT_MONO }}>{selectedItem.debit_air_m3_jam || '-'}</div>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>Sumber Air</label>
+                                                {isEditMode ? (
+                                                    <select value={selectedItem.sumber_air ?? 'PDAM'} onChange={e => updateField('sumber_air', e.target.value)} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
+                                                        {OPTIONS.sumber_air.map(s => <option key={s} value={s}>{s}</option>)}
+                                                    </select>
+                                                ) : (
+                                                    <div style={{ padding: '6px 0', fontSize: '0.85rem', color: '#0f172a' }}>{selectedItem.sumber_air || '-'}</div>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>Kapasitas BBM</label>
+                                                {isEditMode ? (
+                                                    <input value={selectedItem.kapasitas_bbm ?? ''} onChange={e => updateField('kapasitas_bbm', e.target.value)} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_SYSTEM }} />
+                                                ) : (
+                                                    <div style={{ padding: '6px 0', fontSize: '0.85rem', color: '#0f172a' }}>{selectedItem.kapasitas_bbm || '-'}</div>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>Hydrant</label>
+                                                {isEditMode ? (
+                                                    <input value={selectedItem.hydrant ?? ''} onChange={e => updateField('hydrant', e.target.value)} style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_SYSTEM }} />
+                                                ) : (
+                                                    <div style={{ padding: '6px 0', fontSize: '0.85rem', color: '#0f172a' }}>{selectedItem.hydrant || '-'}</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Section 7: Keterangan */}
+                                    <div style={{ marginBottom: '24px' }}>
+                                        <h3 style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a', marginBottom: '12px', paddingBottom: '6px', borderBottom: '2px solid #e2e8f0' }}>
+                                            Keterangan
+                                        </h3>
+                                        {isEditMode ? (
+                                            <textarea value={selectedItem.keterangan ?? ''} onChange={e => updateField('keterangan', e.target.value)} rows="3" style={{ width: '100%', padding: '8px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: FONT_SYSTEM, resize: 'vertical' }} placeholder="Catatan tambahan..." />
+                                        ) : (
+                                            <div style={{ padding: '8px 0', fontSize: '0.85rem', color: '#475569', lineHeight: '1.5' }}>{selectedItem.keterangan || '-'}</div>
+                                        )}
+                                    </div>
+
+                                    {/* Section 9: Dokumentasi Foto */}
+                                    <div style={{ marginBottom: '24px' }}>
+                                        <h3 style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a', marginBottom: '12px', paddingBottom: '6px', borderBottom: '2px solid #e2e8f0' }}>
+                                            Dokumentasi Foto (Max 4 - JPG/PDF)
+                                        </h3>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                                            {[0, 1, 2, 3].map(idx => {
+                                                const foto = selectedItem.fotos?.[idx]
+                                                return (
+                                                    <div key={idx} style={{
+                                                        aspectRatio: '4/3',
+                                                        border: '2px dashed #cbd5e1',
+                                                        borderRadius: '8px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        background: foto ? '#f1f5f9' : '#f8fafc',
+                                                        position: 'relative',
+                                                        overflow: 'hidden'
+                                                    }}>
+                                                        {foto ? (
+                                                            <>
+                                                                {/* Preview */}
+                                                                {foto.type === 'application/pdf' ? (
+                                                                    <div style={{ textAlign: 'center', padding: '10px' }}>
+                                                                        <div style={{ fontSize: '32px', marginBottom: '8px' }}>📄</div>
+                                                                        <div style={{ fontSize: '0.7rem', color: '#64748b', wordBreak: 'break-word' }}>
+                                                                            {foto.name}
+                                                                        </div>
+                                                                    </div>
+                                                                ) : (
+                                                                    <img
+                                                                        src={foto.url}
+                                                                        alt={`Foto ${idx + 1}`}
+                                                                        style={{
+                                                                            width: '100%',
+                                                                            height: '100%',
+                                                                            objectFit: 'cover'
+                                                                        }}
+                                                                    />
+                                                                )}
+                                                                {/* Delete button in edit mode */}
+                                                                {isEditMode && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            const newFotos = [...(selectedItem.fotos || [])]
+                                                                            newFotos.splice(idx, 1)
+                                                                            updateField('fotos', newFotos)
+                                                                        }}
+                                                                        style={{
+                                                                            position: 'absolute',
+                                                                            top: '4px',
+                                                                            right: '4px',
+                                                                            background: '#ef4444',
+                                                                            color: 'white',
+                                                                            border: 'none',
+                                                                            borderRadius: '4px',
+                                                                            padding: '4px 8px',
+                                                                            fontSize: '0.7rem',
+                                                                            cursor: 'pointer',
+                                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                                                        }}
+                                                                    >
+                                                                        ✕
+                                                                    </button>
+                                                                )}
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                {isEditMode ? (
+                                                                    <label style={{
+                                                                        width: '100%',
+                                                                        height: '100%',
+                                                                        display: 'flex',
+                                                                        flexDirection: 'column',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        cursor: 'pointer',
+                                                                        color: '#94a3b8'
+                                                                    }}>
+                                                                        <div style={{ fontSize: '24px', marginBottom: '4px' }}>📷</div>
+                                                                        <div style={{ fontSize: '0.7rem' }}>Upload Foto {idx + 1}</div>
+                                                                        <div style={{ fontSize: '0.65rem', marginTop: '2px' }}>JPG/PDF</div>
+                                                                        <input
+                                                                            type="file"
+                                                                            accept="image/jpeg,image/jpg,application/pdf"
+                                                                            style={{ display: 'none' }}
+                                                                            onChange={(e) => {
+                                                                                const file = e.target.files[0]
+                                                                                if (file) {
+                                                                                    const reader = new FileReader()
+                                                                                    reader.onload = (event) => {
+                                                                                        const newFotos = [...(selectedItem.fotos || [])]
+                                                                                        newFotos[idx] = {
+                                                                                            name: file.name,
+                                                                                            type: file.type,
+                                                                                            url: event.target.result
+                                                                                        }
+                                                                                        updateField('fotos', newFotos)
+                                                                                    }
+                                                                                    reader.readAsDataURL(file)
+                                                                                }
+                                                                            }}
+                                                                        />
+                                                                    </label>
+                                                                ) : (
+                                                                    <div style={{ textAlign: 'center', color: '#cbd5e1' }}>
+                                                                        <div style={{ fontSize: '24px', marginBottom: '4px' }}>📷</div>
+                                                                        <div style={{ fontSize: '0.7rem' }}>Foto {idx + 1}</div>
+                                                                    </div>
+                                                                )}
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+
+                                </form>
+                            </div>
+                        </div>
+                    )}
+                </>
             )}
 
-            {/* Modal Detail */}
-            {isModalOpen && selectedItem && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }} onClick={() => setIsModalOpen(false)}>
-                    <div style={{ background: 'white', borderRadius: '12px', maxWidth: '900px', width: '100%', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}>
+            {/* Import Preview Modal */}
+            {showPreview && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0, 0, 0, 0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                    padding: '20px'
+                }} onClick={() => setShowPreview(false)}>
+                    <div style={{
+                        background: 'white',
+                        borderRadius: '12px',
+                        maxWidth: '1400px',
+                        width: '100%',
+                        maxHeight: '90vh',
+                        overflowY: 'auto',
+                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+                    }} onClick={e => e.stopPropagation()}>
+
                         {/* Header */}
-                        <div style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #3b82f6 100%)', padding: '24px', color: 'white', borderBottom: '2px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+                        <div style={{
+                            padding: '20px 24px',
+                            borderBottom: '1px solid #e2e8f0',
+                            position: 'sticky',
+                            top: 0,
+                            background: 'white',
+                            zIndex: 10
+                        }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div>
-                                    <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: '#ffffff' }}>📋 Detail Dermaga</h2>
-                                    <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'rgba(255,255,255,0.8)' }}>Informasi lengkap fasilitas dermaga</p>
+                                    <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700', color: '#0f172a' }}>
+                                        👁️ Preview Import Data Faslabuh
+                                    </h2>
+                                    <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                                        Total: <strong>{previewData.length}</strong> baris data
+                                    </p>
                                 </div>
-                                <button onClick={() => setIsModalOpen(false)} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', width: '36px', height: '36px', borderRadius: '8px', fontSize: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                                <button onClick={() => setShowPreview(false)} style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    fontSize: '24px',
+                                    cursor: 'pointer',
+                                    color: '#94a3b8'
+                                }}>
+                                    ×
+                                </button>
+                            </div>
+
+                            {/* Mode Selection */}
+                            <div style={{ marginTop: '16px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                <label style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>
+                                    Mode Import:
+                                </label>
+                                <select
+                                    value={importMode}
+                                    onChange={(e) => setImportMode(e.target.value)}
+                                    style={{
+                                        padding: '6px 12px',
+                                        fontSize: '0.8rem',
+                                        border: '1px solid #cbd5e1',
+                                        borderRadius: '4px',
+                                        fontFamily: FONT_SYSTEM
+                                    }}
+                                >
+                                    <option value="upsert">✅ Upsert (Tambah & Update Otomatis)</option>
+                                    <option value="insert-only">➕ Insert Only (Hanya Tambah Baru)</option>
+                                    <option value="update-only">🔄 Update Only (Hanya Update Existing)</option>
+                                </select>
+                                <button
+                                    onClick={handleImportToDatabase}
+                                    disabled={importing}
+                                    style={{
+                                        background: importing ? '#94a3b8' : '#10b981',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        padding: '6px 16px',
+                                        fontSize: '0.85rem',
+                                        cursor: importing ? 'not-allowed' : 'pointer',
+                                        fontFamily: FONT_SYSTEM,
+                                        fontWeight: '600'
+                                    }}
+                                >
+                                    {importing ? '⏳ Importing...' : '🚀 Import ke Database'}
+                                </button>
                             </div>
                         </div>
 
-                        {/* Content */}
-                        <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
-                            <form onSubmit={handleSave}>
-                                {/* A. Informasi Lokasi */}
-                                <div style={{ marginBottom: '24px' }}>
-                                    <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#1e40af', marginBottom: '12px', borderBottom: '2px solid #e5e7eb', paddingBottom: '8px' }}>📍 Informasi Lokasi</h3>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-                                        <div>
-                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>Lantamal</label>
-                                            <input type="text" value={selectedItem.lantamal || ''} onChange={(e) => updateField('lantamal', e.target.value)} disabled={!isEditMode} style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }} />
-                                        </div>
-                                        <div>
-                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>Lanal/Faslan</label>
-                                            <input type="text" value={selectedItem.lanal_faslan || ''} onChange={(e) => updateField('lanal_faslan', e.target.value)} disabled={!isEditMode} style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }} />
-                                        </div>
-                                        <div style={{ gridColumn: '1 / -1' }}>
-                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>Lokasi Dermaga ⭐</label>
-                                            <textarea value={selectedItem.lokasi_dermaga || ''} onChange={(e) => updateField('lokasi_dermaga', e.target.value)} disabled={!isEditMode} rows={2} style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px', resize: 'vertical' }} />
-                                        </div>
-                                    </div>
+                        {/* Preview Table */}
+                        <div style={{ padding: '16px 24px' }}>
+                            <div style={{
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '6px',
+                                overflow: 'hidden'
+                            }}>
+                                <div style={{
+                                    overflowX: 'auto',
+                                    maxHeight: '500px',
+                                    overflowY: 'auto'
+                                }}>
+                                    <table style={{
+                                        width: '100%',
+                                        borderCollapse: 'collapse',
+                                        fontSize: '0.75rem'
+                                    }}>
+                                        <thead>
+                                            <tr style={{ background: '#003366', color: 'white' }}>
+                                                <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>No</th>
+                                                <th style={{ padding: '8px 6px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5, minWidth: '80px' }}>Provinsi</th>
+                                                <th style={{ padding: '8px 6px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5, minWidth: '80px' }}>Wilayah</th>
+                                                <th style={{ padding: '8px 6px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5, minWidth: '120px' }}>Nama Dermaga</th>
+                                                <th style={{ padding: '8px 6px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5, minWidth: '100px' }}>Konstruksi</th>
+                                                <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>P (m)</th>
+                                                <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>L (m)</th>
+                                                <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>Draft</th>
+                                                <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>Pasut</th>
+                                                <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>Kondisi</th>
+                                                <th style={{ padding: '8px 6px', textAlign: 'left', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5, minWidth: '100px' }}>Sandar</th>
+                                                <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>Plat MST</th>
+                                                <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>Listrik</th>
+                                                <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>Air</th>
+                                                <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600', fontSize: '0.7rem', position: 'sticky', top: 0, background: '#003366', zIndex: 5 }}>BBM</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {previewData.map((item, index) => (
+                                                <tr
+                                                    key={index}
+                                                    style={{
+                                                        background: index % 2 === 0 ? '#ffffff' : '#f8fafc',
+                                                        borderBottom: '1px solid #f1f5f9'
+                                                    }}
+                                                >
+                                                    <td style={{ padding: '6px 6px', textAlign: 'center', color: '#64748b', fontSize: '0.7rem' }}>{index + 1}</td>
+                                                    <td style={{ padding: '6px 6px', color: '#475569', fontSize: '0.7rem' }}>{item.provinsi || '-'}</td>
+                                                    <td style={{ padding: '6px 6px', color: '#64748b', fontSize: '0.65rem' }}>{item.wilayah || '-'}</td>
+                                                    <td style={{ padding: '6px 6px', fontWeight: '600', color: '#003366', fontSize: '0.75rem' }}>{item.nama_dermaga || '-'}</td>
+                                                    <td style={{ padding: '6px 6px', color: '#334155', fontSize: '0.65rem' }}>{item.konstruksi || '-'}</td>
+                                                    <td style={{ padding: '6px 6px', textAlign: 'right', fontFamily: FONT_MONO, fontSize: '0.7rem' }}>{item.panjang || 0}</td>
+                                                    <td style={{ padding: '6px 6px', textAlign: 'right', fontFamily: FONT_MONO, fontSize: '0.7rem' }}>{item.lebar || 0}</td>
+                                                    <td style={{ padding: '6px 6px', textAlign: 'right', fontFamily: FONT_MONO, fontSize: '0.7rem' }}>{item.draft_lwl || 0}</td>
+                                                    <td style={{ padding: '6px 6px', textAlign: 'right', fontFamily: FONT_MONO, fontSize: '0.7rem' }}>{item.pasut_hwl_lwl || 0}</td>
+                                                    <td style={{ padding: '6px 6px', textAlign: 'center' }}>
+                                                        <span style={{
+                                                            padding: '2px 6px',
+                                                            borderRadius: '4px',
+                                                            fontSize: '0.65rem',
+                                                            fontWeight: '600',
+                                                            background: item.kondisi > 70 ? '#dcfce7' : '#fef3c7',
+                                                            color: item.kondisi > 70 ? '#15803d' : '#b45309'
+                                                        }}>
+                                                            {item.kondisi || 0}%
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ padding: '6px 6px', fontSize: '0.65rem', color: '#64748b' }}>
+                                                        {item.sandar_items?.length > 0 ? item.sandar_items.map(s => `${s.jumlah}x ${s.tipe} (${s.ton}t)`).join(', ') : '-'}
+                                                    </td>
+                                                    <td style={{ padding: '6px 6px', textAlign: 'right', fontFamily: FONT_MONO, fontSize: '0.7rem' }}>{item.plat_mst_ton || '-'}</td>
+                                                    <td style={{ padding: '6px 6px', textAlign: 'center', fontSize: '0.65rem' }}>
+                                                        {item.listrik_sumber || '-'}{item.listrik_daya_kva ? ` (${item.listrik_daya_kva}kVA)` : ''}
+                                                    </td>
+                                                    <td style={{ padding: '6px 6px', textAlign: 'center', fontSize: '0.65rem' }}>
+                                                        {item.air_sumber || '-'}{item.air_gwt_m3 ? ` (${item.air_gwt_m3}m³)` : ''}
+                                                    </td>
+                                                    <td style={{ padding: '6px 6px', textAlign: 'center', fontSize: '0.65rem' }}>{item.bbm || '-'}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
+                            </div>
 
-                                {/* B. Identifikasi */}
-                                <div style={{ marginBottom: '24px' }}>
-                                    <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#1e40af', marginBottom: '12px', borderBottom: '2px solid #e5e7eb', paddingBottom: '8px' }}>🏷️ Identifikasi Dermaga</h3>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-                                        <div>
-                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>Nama Dermaga ⭐</label>
-                                            <input type="text" value={selectedItem.nama_dermaga || ''} onChange={(e) => updateField('nama_dermaga', e.target.value)} disabled={!isEditMode} required style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }} />
-                                        </div>
-                                        <div>
-                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>Jenis Dermaga</label>
-                                            <input type="text" value={selectedItem.jenis_dermaga || ''} onChange={(e) => updateField('jenis_dermaga', e.target.value)} disabled={!isEditMode} style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }} />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* C. Spesifikasi Teknis */}
-                                <div style={{ marginBottom: '24px' }}>
-                                    <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#1e40af', marginBottom: '12px', borderBottom: '2px solid #e5e7eb', paddingBottom: '8px' }}>📐 Spesifikasi Teknis</h3>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                                        <div>
-                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>Panjang (m)</label>
-                                            <input type="number" step="0.01" value={selectedItem.panjang_m || 0} onChange={(e) => updateField('panjang_m', parseFloat(e.target.value))} disabled={!isEditMode} style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }} />
-                                        </div>
-                                        <div>
-                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>Lebar (m)</label>
-                                            <input type="number" step="0.01" value={selectedItem.lebar_m || 0} onChange={(e) => updateField('lebar_m', parseFloat(e.target.value))} disabled={!isEditMode} style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }} />
-                                        </div>
-                                        <div>
-                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>Kedalaman (m)</label>
-                                            <input type="number" step="0.01" value={selectedItem.kedalaman_m || 0} onChange={(e) => updateField('kedalaman_m', parseFloat(e.target.value))} disabled={!isEditMode} style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }} />
-                                        </div>
-                                        <div>
-                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>Luas (m²)</label>
-                                            <input type="number" step="0.01" value={selectedItem.luas_m2 || 0} onChange={(e) => updateField('luas_m2', parseFloat(e.target.value))} disabled={!isEditMode} style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }} />
-                                        </div>
-                                        <div>
-                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>Konstruksi</label>
-                                            <input type="text" value={selectedItem.konstruksi || ''} onChange={(e) => updateField('konstruksi', e.target.value)} disabled={!isEditMode} style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }} />
-                                        </div>
-                                        <div>
-                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>Tahun Pembangunan</label>
-                                            <input type="number" value={selectedItem.tahun_pembangunan || ''} onChange={(e) => updateField('tahun_pembangunan', parseInt(e.target.value))} disabled={!isEditMode} style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }} />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* D. Kondisi */}
-                                <div style={{ marginBottom: '24px' }}>
-                                    <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#1e40af', marginBottom: '12px', borderBottom: '2px solid #e5e7eb', paddingBottom: '8px' }}>🔧 Kondisi Fisik</h3>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
-                                        {['kondisi_dermaga', 'kondisi_lantai', 'kondisi_dinding', 'kondisi_fender'].map(field => (
-                                            <div key={field}>
-                                                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>{field.replace('kondisi_', '').replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} {field === 'kondisi_dermaga' ? '⭐' : ''}</label>
-                                                <select value={selectedItem[field] || 'Baik'} onChange={(e) => updateField(field, e.target.value)} disabled={!isEditMode} style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }}>
-                                                    <option>Baik</option>
-                                                    <option>Rusak Ringan</option>
-                                                    <option>Rusak Berat</option>
-                                                </select>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* E. Koordinat */}
-                                <div style={{ marginBottom: '24px' }}>
-                                    <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#1e40af', marginBottom: '12px', borderBottom: '2px solid #e5e7eb', paddingBottom: '8px' }}>📍 Koordinat Lokasi <span style={{ fontSize: '11px', fontWeight: '400', color: '#6b7280' }}>(Opsional - untuk peta)</span></h3>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-                                        <div>
-                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>🌐 Longitude</label>
-                                            <input type="number" step="any" placeholder="Contoh: 106.8456" value={selectedItem.longitude || ''} onChange={(e) => updateField('longitude', parseFloat(e.target.value))} disabled={!isEditMode} style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }} />
-                                        </div>
-                                        <div>
-                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>🌐 Latitude</label>
-                                            <input type="number" step="any" placeholder="Contoh: -6.2088" value={selectedItem.latitude || ''} onChange={(e) => updateField('latitude', parseFloat(e.target.value))} disabled={!isEditMode} style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }} />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Footer Actions */}
-                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
-                                    {!isEditMode ? (
-                                        <>
-                                            <button type="button" onClick={handleEdit} style={{ background: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>✏️ Edit</button>
-                                            {selectedItem.id && <button type="button" onClick={handleDelete} style={{ background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>🗑️ Hapus</button>}
-                                            <button type="button" onClick={() => setIsModalOpen(false)} style={{ background: '#6b7280', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Tutup</button>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <button type="submit" style={{ background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>💾 Simpan</button>
-                                            <button type="button" onClick={() => { setIsEditMode(false); setIsModalOpen(false) }} style={{ background: '#6b7280', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Batal</button>
-                                        </>
-                                    )}
-                                </div>
-                            </form>
+                            {/* Data Summary */}
+                            <div style={{ marginTop: '12px', padding: '12px', background: '#f8fafc', borderRadius: '6px', fontSize: '0.75rem', color: '#475569' }}>
+                                <strong>📊 Ringkasan Data:</strong>
+                                <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
+                                    <li>Total baris: <strong>{previewData.length}</strong></li>
+                                    <li>Dengan Sandar Items: <strong>{previewData.filter(d => d.sandar_items?.length > 0).length}</strong></li>
+                                    <li>Dengan Listrik: <strong>{previewData.filter(d => d.listrik_sumber).length}</strong></li>
+                                    <li>Dengan Air: <strong>{previewData.filter(d => d.air_sumber).length}</strong></li>
+                                    <li>Dengan BBM: <strong>{previewData.filter(d => d.bbm).length}</strong></li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
