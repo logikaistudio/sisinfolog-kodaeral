@@ -904,6 +904,70 @@ function Faslabuh() {
                 </span>
             </div>
 
+            {/* Summary Cards */}
+            {!loading && (
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gap: '16px',
+                    marginBottom: '16px'
+                }}>
+                    {/* Total Dermaga */}
+                    <div style={{
+                        background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                        borderRadius: '12px',
+                        padding: '20px',
+                        color: 'white',
+                        boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.3)'
+                    }}>
+                        <div style={{ fontSize: '0.75rem', opacity: 0.9, marginBottom: '8px', fontWeight: '500' }}>Total Dermaga</div>
+                        <div style={{ fontSize: '2rem', fontWeight: '700', fontFamily: FONT_MONO }}>{data.length}</div>
+                        <div style={{ fontSize: '0.7rem', opacity: 0.8, marginTop: '4px' }}>Fasilitas Pelabuhan</div>
+                    </div>
+
+                    {/* Total Lanal */}
+                    <div style={{
+                        background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                        borderRadius: '12px',
+                        padding: '20px',
+                        color: 'white',
+                        boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.3)'
+                    }}>
+                        <div style={{ fontSize: '0.75rem', opacity: 0.9, marginBottom: '8px', fontWeight: '500' }}>Total Lanal</div>
+                        <div style={{ fontSize: '2rem', fontWeight: '700', fontFamily: FONT_MONO }}>
+                            {new Set(data.map(item => item.lokasi).filter(Boolean)).size}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', opacity: 0.8, marginTop: '4px' }}>Lokasi Berbeda</div>
+                    </div>
+
+                    {/* Kondisi Rata-rata */}
+                    <div style={{
+                        background: (() => {
+                            const avgKondisi = data.length > 0
+                                ? data.reduce((sum, item) => sum + (parseFloat(item.kondisi_persen) || 0), 0) / data.length
+                                : 0;
+                            return avgKondisi >= 80
+                                ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                                : avgKondisi >= 50
+                                    ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+                                    : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                        })(),
+                        borderRadius: '12px',
+                        padding: '20px',
+                        color: 'white',
+                        boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)'
+                    }}>
+                        <div style={{ fontSize: '0.75rem', opacity: 0.9, marginBottom: '8px', fontWeight: '500' }}>Kondisi Rata-rata</div>
+                        <div style={{ fontSize: '2rem', fontWeight: '700', fontFamily: FONT_MONO }}>
+                            {data.length > 0
+                                ? (data.reduce((sum, item) => sum + (parseFloat(item.kondisi_persen) || 0), 0) / data.length).toFixed(1)
+                                : 0}%
+                        </div>
+                        <div style={{ fontSize: '0.7rem', opacity: 0.8, marginTop: '4px' }}>Seluruh Dermaga</div>
+                    </div>
+                </div>
+            )}
+
             {/* Loading State */}
             {loading ? (
                 <div style={{
@@ -997,7 +1061,7 @@ function Faslabuh() {
                                                 <td style={{ padding: '6px 10px', textAlign: 'center', fontFamily: FONT_MONO, fontSize: '0.65rem', color: '#64748b' }}>
                                                     {item.lat && item.lon ? `${item.lat}, ${item.lon}` : '-'}
                                                 </td>
-                                                <td style={{ padding: '6px 10px', fontWeight: '600', color: '#003366' }}>{item.nama_dermaga}</td>
+                                                <td style={{ padding: '6px 10px', fontWeight: '600', color: '#ef4444' }}>{item.nama_dermaga}</td>
                                                 <td style={{ padding: '6px 10px', color: '#334155' }}>{item.konstruksi}</td>
 
                                                 {/* Dimensi */}
