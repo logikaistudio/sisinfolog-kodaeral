@@ -136,10 +136,16 @@ function App() {
 
   return (
     <div className="app-container">
-      {/* Mobile Menu Button */}
+      {/* Mobile Menu Button AND Desktop Unhide Button */}
       <button
-        className="mobile-menu-btn"
-        onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+        className={`mobile-menu-btn ${sidebarCollapsed ? 'show-on-desktop' : ''}`}
+        onClick={() => {
+            if (window.innerWidth <= 1024) {
+                setMobileSidebarOpen(!mobileSidebarOpen)
+            } else {
+                setSidebarCollapsed(false)
+            }
+        }}
         aria-label="Toggle menu"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

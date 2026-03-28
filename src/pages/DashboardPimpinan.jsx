@@ -1,8 +1,29 @@
 import { useState, useEffect } from 'react'
 import PropTypes from 'prop-types'
+import PetaFaslan from './PetaFaslan'
+
+const LiveClock = () => {
+    const [time, setTime] = useState(new Date());
+    useEffect(() => {
+        const timer = setInterval(() => setTime(new Date()), 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const dayName = time.toLocaleDateString('id-ID', { weekday: 'long' });
+    const dateStr = time.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    const timeStr = time.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    return (
+        <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <div style={{ fontSize: '1.8rem', fontWeight: '800', color: '#1e293b', lineHeight: '1' }}>{timeStr}</div>
+            <div style={{ fontSize: '1rem', color: '#64748b', fontWeight: '500', marginTop: '4px' }}>{dayName}, {dateStr}</div>
+        </div>
+    );
+};
 
 const DashboardPimpinan = ({ setCurrentPage }) => {
     const [loading, setLoading] = useState(true)
+    const [showDisaster, setShowDisaster] = useState(true)
     const [dashboardData, setDashboardData] = useState({
         faslan: {
             totalTanah: 0,
@@ -28,12 +49,14 @@ const DashboardPimpinan = ({ setCurrentPage }) => {
             try {
                 setLoading(true)
 
+                const base = import.meta.env.PROD ? '' : 'http://localhost:3001'
+
                 // Fetch Faslan Data
                 const [tanah, kapling, pemanfaatan, faslabuh] = await Promise.all([
-                    fetch('http://localhost:3001/api/assets/tanah').then(r => r.json()),
-                    fetch('http://localhost:3001/api/assets/kapling').then(r => r.json()),
-                    fetch('http://localhost:3001/api/assets/pemanfaatan').then(r => r.json()),
-                    fetch('http://localhost:3001/api/faslabuh').then(r => r.json()).catch(() => [])
+                    fetch(`${base}/api/assets/tanah`).then(r => r.json()).catch(() => []),
+                    fetch(`${base}/api/assets/kapling`).then(r => r.json()).catch(() => []),
+                    fetch(`${base}/api/assets/pemanfaatan`).then(r => r.json()).catch(() => []),
+                    fetch(`${base}/api/faslabuh`).then(r => r.json()).catch(() => [])
                 ])
 
                 // Calculate totals
@@ -154,6 +177,23 @@ const DashboardPimpinan = ({ setCurrentPage }) => {
         }
     ]
 
+    const incidents = [
+        { jenis: 'Banjir', tinggi: '80', terdampak: '320', keterangan: 'Genangan parah di Bidara Cina', areaText: '12.400 m²', time: '09:42' },
+        { jenis: 'Banjir', tinggi: '45', terdampak: '120', keterangan: 'Jalan Matraman putus', areaText: '5.200 m²', time: '08:15' },
+        { jenis: 'Banjir', tinggi: '110', terdampak: '500', keterangan: 'Banjir Kp. Melayu, evakuasi berlangsung, perahu karet dikerahkan.', areaText: '15.000 m²', time: '10:05' },
+        { jenis: 'Banjir', tinggi: '135', terdampak: '850', keterangan: 'Banjir Cawang, Posko darurat didirikan di area RS.', areaText: '21.000 m²', time: '10:30' },
+        { jenis: 'Banjir', tinggi: '150', terdampak: '1200', keterangan: 'Banjir Bidara Cina, luapan Ciliwung deras, Butuh bantuan logistik.', areaText: '30.500 m²', time: '11:15' },
+    ];
+
+    const distributionData = [
+      { item: 'Perahu Karet',     icon: '🚤', total: 40, deployed: 28, unit: 'unit', location: 'Bidara Cina', kondisi: 'Baik', date: '28 Mar 2026', pic: 'Regu Alpha' },
+      { item: 'Pompa Air Mobile', icon: '💧', total: 60, deployed: 42, unit: 'unit', location: 'Pluit', kondisi: 'Baik', date: '28 Mar 2026', pic: 'Regu Bravo' },
+      { item: 'Tenda Darurat',    icon: '⛺', total: 120, deployed: 85, unit: 'unit', location: 'Manggarai', kondisi: 'Perlu Servis', date: '27 Mar 2026', pic: 'Dinsos DKI' },
+      { item: 'Karung Pasir',     icon: '🛁', total: 5000, deployed: 3200, unit: 'sak', location: 'Tanah Abang', kondisi: 'Siap Pakai', date: '27 Mar 2026', pic: 'SDA Pemprov' },
+      { item: 'Logistik Pangan',  icon: '🍱', total: 2000, deployed: 1240, unit: 'pack', location: 'Kampung Melayu', kondisi: 'Aman', date: '28 Mar 2026', pic: 'BPBD Logistik' },
+      { item: 'Kit Medis',        icon: '🏥', total: 80, deployed: 55, unit: 'kit', location: 'Posko Utama', kondisi: 'Lengkap', date: '28 Mar 2026', pic: 'Dinkes' },
+    ];
+
     if (loading) {
         return (
             <div className="fade-in" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
@@ -167,13 +207,25 @@ const DashboardPimpinan = ({ setCurrentPage }) => {
 
     return (
         <div className="fade-in">
-            <div className="page-header">
-                <h1 className="page-title">Dashboard Pimpinan</h1>
-                <p className="page-subtitle">Ringkasan Eksekutif Data Logistik & Fasilitas Kodaeral 3 Jakarta</p>
+            <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                    <h1 className="page-title">Dashboard Pimpinan</h1>
+                    <p className="page-subtitle">Ringkasan Eksekutif Data Logistik & Fasilitas Kodaeral 3 Jakarta</p>
+                </div>
+                <LiveClock />
             </div>
 
-            {/* Main Stats Grid */}
-            <div className="stats-grid">
+            {/* 3x3 Grid Dashboard Layout */}
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: '70% 30%',
+                gap: '24px',
+                alignItems: 'start'
+            }}>
+
+                {/* ROW 1: Main Stats (Span 2 Cols) */}
+                <div style={{ gridColumn: '1 / 3' }}>
+                    <div className="stats-grid">
                 {mainStats.map((stat, idx) => (
                     <div
                         key={idx}
@@ -208,9 +260,66 @@ const DashboardPimpinan = ({ setCurrentPage }) => {
                     </div>
                 ))}
             </div>
+            </div>
 
-            {/* Detailed Breakdown */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginTop: '24px' }}>
+            {/* ROW 2 & 3: Map Layout (Span 1 Col of 70%) */}
+            <div style={{ gridColumn: '1 / 2', display: 'flex', flexDirection: 'column', height: '100%', minHeight: '600px' }}>
+                <div className="card" style={{ flex: 1, padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e7eb', background: '#f8fafc', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
+                                <h3 style={{ margin: 0, fontSize: '1.4rem', color: '#1e293b', fontWeight: '800', lineHeight: 1.2 }}>
+                                    🗺️ Peta Operasi & Kebencanaan Kodaeral 3
+                                </h3>
+                                <button 
+                                    onClick={() => setShowDisaster(!showDisaster)}
+                                    style={{
+                                        padding: '8px 16px', background: showDisaster ? '#fee2e2' : '#dcfce7', color: showDisaster ? '#dc2626' : '#16a34a', border: `1px solid ${showDisaster ? '#fca5a5' : '#86efac'}`, borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600', width: 'fit-content', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                                    }}
+                                >
+                                    <span style={{ fontSize: '18px' }}>{showDisaster ? '👁️' : '👁️‍🗨️'}</span> 
+                                    {showDisaster ? 'Sembunyikan Label Bencana' : 'Tampilkan Label Bencana'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div style={{ flex: 1, position: 'relative', minHeight: '500px' }}>
+                        <PetaFaslan isDashboard={true} showDisaster={showDisaster} />
+                    </div>
+                </div>
+            </div>
+
+            {/* ROW 2 & 3: Detail Breakdown & Quick Actions */}
+            <div style={{ gridColumn: '2 / 3', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                
+                {/* Deskripsi Kejadian (Activity Feed) */}
+                <div className="card" style={{ padding: '20px' }}>
+                    <h3 style={{ fontSize: '1.1rem', marginBottom: '16px', color: '#1e293b', fontWeight: '700' }}>
+                        📋 Deskripsi Kejadian
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {incidents.map((inc, i) => (
+                            <div key={i} style={{ padding: '12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                    <span style={{ fontSize: '12px', fontWeight: '600', padding: '2px 8px', borderRadius: '4px', background: inc.jenis === 'Banjir' ? '#fee2e2' : '#fef3c7', color: inc.jenis === 'Banjir' ? '#dc2626' : '#d97706' }}>
+                                        {inc.jenis}
+                                    </span>
+                                    <span style={{ fontSize: '12px', color: '#64748b' }}>{inc.time}</span>
+                                </div>
+                                {inc.areaText && <div style={{ fontSize: '13px', color: '#0ea5e9', fontWeight: '600', paddingBottom: '4px' }}>📐 {inc.areaText}</div>}
+                                <div style={{ fontSize: '13px', color: '#475569', marginBottom: '6px' }}>
+                                    💧 Tinggi: <strong>{inc.tinggi} cm</strong> | 👥 Terdampak: <strong>{inc.terdampak} jiwa</strong>
+                                </div>
+                                <div style={{ fontSize: '13px', color: '#64748b', borderTop: '1px solid #e2e8f0', paddingTop: '8px', lineHeight: '1.4' }}>
+                                    {inc.keterangan}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Detailed Breakdown */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 {detailCards.map((card, idx) => (
                     <div key={idx} className="card" style={{
                         background: card.highlight ? `linear-gradient(135deg, ${card.color}15 0%, ${card.color}05 100%)` : 'white',
@@ -296,7 +405,7 @@ const DashboardPimpinan = ({ setCurrentPage }) => {
             </div>
 
             {/* Quick Actions */}
-            <div className="card" style={{ marginTop: '24px' }}>
+            <div className="card" style={{ marginTop: '0' }}>
                 <h3 style={{ fontSize: '1.1rem', marginBottom: '16px', color: '#003366', fontFamily: 'var(--font-family)' }}>
                     🚀 Akses Cepat
                 </h3>
@@ -341,6 +450,62 @@ const DashboardPimpinan = ({ setCurrentPage }) => {
                     ))}
                 </div>
             </div>
+
+            </div> {/* End of gridColumn 3/4 */}
+
+            {/* ROW 4: Distribusi Material */}
+            <div style={{ gridColumn: '1 / 3' }}>
+                <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
+                    <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e7eb', background: '#f8fafc' }}>
+                        <h3 style={{ margin: '0', fontSize: '1.2rem', color: '#1e293b', fontWeight: '700' }}>📦 Distribusi Logistik & Material</h3>
+                        <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748b' }}>Pemantauan alokasi aset darurat dan penanggung jawab lapangan</p>
+                    </div>
+                    <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px', whiteSpace: 'nowrap' }}>
+                            <thead>
+                                <tr style={{ background: '#f1f5f9', borderBottom: '1px solid #e2e8f0', color: '#475569' }}>
+                                    <th style={{ padding: '12px 24px', fontWeight: '600' }}>Material / Item</th>
+                                    <th style={{ padding: '12px 24px', fontWeight: '600' }}>Ketersediaan</th>
+                                    <th style={{ padding: '12px 24px', fontWeight: '600' }}>Terdistribusi</th>
+                                    <th style={{ padding: '12px 24px', fontWeight: '600' }}>Lokasi Distribusi</th>
+                                    <th style={{ padding: '12px 24px', fontWeight: '600' }}>Kondisi</th>
+                                    <th style={{ padding: '12px 24px', fontWeight: '600' }}>PIC</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {distributionData.map((d, i) => {
+                                    const pct = Math.round((d.deployed / d.total) * 100)
+                                    const pctColor = pct > 80 ? '#dc2626' : pct > 50 ? '#d97706' : '#10b981'
+                                    return (
+                                        <tr key={i} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                            <td style={{ padding: '16px 24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <span style={{ fontSize: '18px' }}>{d.icon}</span> 
+                                                <strong style={{ color: '#1e293b' }}>{d.item}</strong>
+                                            </td>
+                                            <td style={{ padding: '16px 24px', color: '#475569' }}>{d.total} <small>{d.unit}</small></td>
+                                            <td style={{ padding: '16px 24px' }}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                    <span style={{ fontWeight: '600', color: '#0ea5e9', fontSize: '13px' }}>{d.deployed} {d.unit} ({pct}%)</span>
+                                                    <div style={{ height: '6px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden', width: '120px' }}>
+                                                        <div style={{ height: '100%', width: `${pct}%`, background: pctColor, borderRadius: '4px' }}></div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td style={{ padding: '16px 24px', color: '#475569' }}>{d.location}</td>
+                                            <td style={{ padding: '16px 24px' }}>
+                                                <span style={{ background: '#f1f5f9', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', color: '#475569', fontWeight: '500' }}>{d.kondisi}</span>
+                                            </td>
+                                            <td style={{ padding: '16px 24px', color: '#475569', fontSize: '13px' }}>{d.pic}</td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            </div> {/* End of 3x3 Grid Layout */}
         </div>
     )
 }

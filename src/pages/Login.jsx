@@ -59,7 +59,7 @@ function Login({ onLogin }) {
                     margin: '0 auto 24px auto',
                     filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.3))'
                 }}>
-                    <img src="/logo.png" alt="Sisinfolog Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    <img src="/logo.png" alt="NEXIS-3 Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 </div>
                 <h1 style={{
                     fontSize: '42px',
@@ -69,7 +69,7 @@ function Login({ onLogin }) {
                     color: '#ffffff',
                     textShadow: '0 4px 12px rgba(0,0,0,0.4)'
                 }}>
-                    Sisinfolog
+                    NEXIS-3
                 </h1>
                 <p style={{
                     margin: 0,
@@ -78,7 +78,7 @@ function Login({ onLogin }) {
                     fontWeight: '500',
                     letterSpacing: '1px'
                 }}>
-                    SISTEM INFORMASI LOGISTIK<br />KODAERAL 3 JAKARTA
+                    NAVAL EXECUTION & INFORMATION SYSTEM<br />KODAERAL 3 JAKARTA
                 </p>
             </div>
 

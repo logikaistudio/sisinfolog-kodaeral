@@ -48,7 +48,7 @@ function MasterData() {
                 {/* Page Header */}
                 <div className="page-header">
                     <h1 className="page-title">Master Data</h1>
-                    <p className="page-subtitle">Kelola data master sistem informasi logistik</p>
+                    <p className="page-subtitle">Kelola data master Naval Execution & Information System</p>
                 </div>
 
                 {/* Tabs */}

@@ -196,13 +196,45 @@ function Sidebar({ currentPage, setCurrentPage, collapsed, setCollapsed, mobileO
     return (
         <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
             {/* Header */}
-            <div className="sidebar-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '50px', padding: '1.5rem 1rem' }}>
+            <div className="sidebar-header" style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '50px', padding: '1.5rem 1rem' }}>
+                {/* Desktop Toggle Button */}
+                <button
+                    onClick={() => setCollapsed(!collapsed)}
+                    className="custom-sidebar-toggle"
+                    style={{
+                        position: 'absolute',
+                        top: '16px',
+                        right: collapsed ? '50%' : '16px',
+                        transform: collapsed ? 'translateX(50%)' : 'none',
+                        background: 'rgba(255,255,255,0.15)',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        borderRadius: '6px',
+                        width: '32px',
+                        height: '32px',
+                        display: window.innerWidth <= 768 ? 'none' : 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        cursor: 'pointer',
+                        zIndex: 10,
+                        transition: 'all 0.3s ease',
+                        padding: 0
+                    }}
+                    title={collapsed ? "Tampilkan Sidebar" : "Sembunyikan Sidebar"}
+                >
+                    {collapsed ? (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="13 17 18 12 13 7"></polyline><polyline points="6 17 11 12 6 7"></polyline></svg>
+                    ) : (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="11 17 6 12 11 7"></polyline><polyline points="18 17 13 12 18 7"></polyline></svg>
+                    )}
+                </button>
+
                 <div className="sidebar-logo" style={{ paddingTop: '40px' }}>
                     <img src="/logo.png" alt="Logo" style={{ width: '96px', height: '96px', objectFit: 'contain' }} />
                 </div>
                 {!collapsed && (
                     <div className="sidebar-title" style={{ textAlign: 'center', width: '100%' }}>
-                        <h1 style={{ lineHeight: '1.3', margin: 0, fontSize: '1.5rem', fontWeight: '700', letterSpacing: '0.5px' }}>Sisinfolog</h1>
+                        <h1 style={{ lineHeight: '1.3', margin: 0, fontSize: '1.5rem', fontWeight: '700', letterSpacing: '0.5px' }}>NEXIS-3</h1>
                         <p style={{ fontSize: 'var(--font-size-sm)', marginTop: '2px', fontWeight: '500', opacity: 0.9, margin: '2px 0 0 0' }}>Kodaeral 3 Jakarta</p>
                     </div>
                 )}
