@@ -148,6 +148,7 @@ function FastanahAssetUtama() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                     {Object.keys(groupedAssets).map((area, idx) => {
                         const areaAssets = groupedAssets[area];
+                        const areaTotalLuas = areaAssets.reduce((sum, asset) => sum + (isNaN(asset.luas_tanah) ? 0 : asset.luas_tanah), 0);
                         return (
                             <div key={idx} style={{
                                 background: '#003366',
@@ -159,12 +160,14 @@ function FastanahAssetUtama() {
                                 <div style={{ padding: '20px 24px', color: 'white' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
                                         <span style={{ color: '#ef4444', fontSize: '1.2rem' }}>📍</span>
-                                        <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '600' }}>{area}</h2>
+                                        <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '600', color: 'white' }}>{area}</h2>
                                     </div>
-                                    <div style={{ fontSize: '0.85rem', color: '#94a3b8', display: 'flex', gap: '12px', paddingLeft: '32px' }}>
+                                    <div style={{ fontSize: '0.85rem', color: '#94a3b8', display: 'flex', gap: '12px', paddingLeft: '32px', alignItems: 'center' }}>
                                         <span>{areaAssets.length} aset terdaftar</span>
                                         <span style={{ color: '#cbd5e1' }}>|</span>
                                         <span>0 Terisi</span>
+                                        <span style={{ color: '#cbd5e1' }}>|</span>
+                                        <span style={{ color: 'white', fontWeight: '600' }}>Total Luas: {formatLuas(areaTotalLuas)}</span>
                                     </div>
                                 </div>
 

@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
+import { useEffect, useState, useMemo, useCallback } from 'react'
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
@@ -94,6 +94,18 @@ function ChangeView({ center }) {
     return null
 }
 
+// MapClickHandler to handle click-to-set-coordinate mode
+function MapClickHandler({ active, onMapClick }) {
+    useMapEvents({
+        click(e) {
+            if (active) {
+                onMapClick(e.latlng)
+            }
+        }
+    })
+    return null
+}
+
 function PetaFaslan({ isDashboard = false, showDisaster = true }) {
     const [assetsTanah, setAssetsTanah] = useState([])
     const [assetsBangunan, setAssetsBangunan] = useState([])
@@ -103,6 +115,15 @@ function PetaFaslan({ isDashboard = false, showDisaster = true }) {
     const [loading, setLoading] = useState(true)
     const [center, setCenter] = useState([-6.1754, 106.8272]) // Default: Jakarta (Monas)
     const [liveDisasters, setLiveDisasters] = useState(INITIAL_WATER_GATES)
+
+    // Coordinate setting mode
+    const [coordMode, setCoordMode] = useState(false)
+    const [allMasterAssets, setAllMasterAssets] = useState([])
+    const [selectedAssetForCoord, setSelectedAssetForCoord] = useState(null)
+    const [coordSaving, setCoordSaving] = useState(false)
+    const [coordSearchTerm, setCoordSearchTerm] = useState('')
+    const [coordFilterType, setCoordFilterType] = useState('all') // 'all', 'TANAH', 'BANGUNAN'
+    const [refreshKey, setRefreshKey] = useState(0)
 
     useEffect(() => {
         if (!isDashboard || !showDisaster) return;
@@ -272,64 +293,98 @@ function PetaFaslan({ isDashboard = false, showDisaster = true }) {
             try {
                 // setLoading(true) // Non-blocking loading
 
-                // Fetch aset tanah
+                const safeFetchStatus = async (url) => {
+                    try {
+                        const res = await fetch(url)
+                        if (!res.ok) return []
+                        return await res.json()
+                    } catch (e) {
+                        return []
+                    }
+                }
+
+                // Fetch Aset Tanah from master data aset (assets/tanah)
                 const endpointTanah = '/api/assets/tanah'
                 const finalEndpointTanah = import.meta.env.PROD ? endpointTanah : `http://localhost:3001${endpointTanah}`
-                const resTanah = await fetch(finalEndpointTanah)
-                const dataTanah = await resTanah.json()
+                const dataTanah = await safeFetchStatus(finalEndpointTanah)
 
-                // Fetch aset bangunan
-                const endpointBangunan = '/api/assets/bangunan'
-                const finalEndpointBangunan = import.meta.env.PROD ? endpointBangunan : `http://localhost:3001${endpointBangunan}`
-                const resBangunan = await fetch(finalEndpointBangunan)
-                const dataBangunan = await resBangunan.json()
+                // Fetch Aset Bangunan from master data utama (bangunan still from master_asset_utama)
+                const endpointMaster = '/api/master-asset-utama'
+                const finalEndpointMaster = import.meta.env.PROD ? endpointMaster : `http://localhost:3001${endpointMaster}`
+                const dataMaster = await safeFetchStatus(finalEndpointMaster)
+                const dataBangunan = dataMaster.filter(d => String(d.jenis_bmn).toUpperCase() === 'BANGUNAN')
+
+                // Store all for coordinate-setting panel
+                setAllMasterAssets([...dataTanah, ...dataBangunan])
 
                 // Fetch Faslabuh
                 const endpointFaslabuh = '/api/faslabuh'
                 const finalEndpointFaslabuh = import.meta.env.PROD ? endpointFaslabuh : `http://localhost:3001${endpointFaslabuh}`
-                const resFaslabuh = await fetch(finalEndpointFaslabuh)
-                const dataFaslabuh = await resFaslabuh.json()
+                const dataFaslabuh = await safeFetchStatus(finalEndpointFaslabuh)
 
                 // Fetch Harkan from API
                 const endpointHarkan = '/api/harkan'
                 const finalEndpointHarkan = import.meta.env.PROD ? endpointHarkan : `http://localhost:3001${endpointHarkan}`
-                const resHarkan = await fetch(finalEndpointHarkan)
-                const dataHarkan = await resHarkan.json()
+                const dataHarkan = await safeFetchStatus(finalEndpointHarkan)
+                
                 const validHarkan = dataHarkan.filter(item => {
-                    // Check if lat/lon exist and are valid numbers
                     const lat = parseFloat(item.latitude)
                     const lon = parseFloat(item.longitude)
                     return !isNaN(lat) && !isNaN(lon)
                 })
                 setAssetsHarkan(validHarkan)
 
-                // Filter assets with valid coordinates
+                // Filter assets_tanah — koordinat dari field 'location' (DMS) atau 'coordinates'
                 const validTanah = dataTanah.filter(asset => {
-                    const coords = parseCoordinates(asset.coordinates)
-                    return coords !== null
+                    // Cek field coordinates dulu
+                    if (asset.coordinates && asset.coordinates !== '-') {
+                        const coords = parseCoordinates(asset.coordinates)
+                        if (coords) {
+                            asset._parsedCoords = coords
+                            return true
+                        }
+                    }
+                    // Fallback: coba field location yang berisi DMS
+                    if (asset.location) {
+                        const coords = parseCoordinates(asset.location)
+                        if (coords) {
+                            asset._parsedCoords = coords
+                            return true
+                        }
+                    }
+                    return false
                 })
 
                 const validBangunan = dataBangunan.filter(asset => {
-                    const coords = parseCoordinates(asset.coordinates)
-                    return coords !== null
+                    if (asset.latitude && asset.longitude && !isNaN(parseFloat(asset.latitude)) && !isNaN(parseFloat(asset.longitude))) {
+                        asset._parsedCoords = [parseFloat(asset.latitude), parseFloat(asset.longitude)]
+                        return true
+                    }
+                    if (asset.coordinates) {
+                        const coords = parseCoordinates(asset.coordinates)
+                        if (coords) {
+                            asset._parsedCoords = coords
+                            return true
+                        }
+                    }
+                    return false
                 })
+
+                const validFaslabuh = dataFaslabuh.filter(f => f.lat && f.lon && !isNaN(parseFloat(f.lat)) && !isNaN(parseFloat(f.lon)))
 
                 setAssetsTanah(validTanah)
                 setAssetsBangunan(validBangunan)
-                // Faslabuh already has separate lat/lon columns, filter those with valid nums
-                setAssetsFaslabuh(dataFaslabuh.filter(f => f.lat && f.lon && !isNaN(parseFloat(f.lat)) && !isNaN(parseFloat(f.lon))))
+                setAssetsFaslabuh(validFaslabuh)
 
-                // Set center to first valid coordinate
+                // Set center prioritized: Tanah -> Bangunan -> Faslabuh -> Harkan -> Default
                 if (validTanah.length > 0) {
-                    const firstCoords = parseCoordinates(validTanah[0].coordinates)
-                    if (firstCoords) {
-                        setCenter(firstCoords)
-                    }
+                    setCenter(validTanah[0]._parsedCoords)
                 } else if (validBangunan.length > 0) {
-                    const firstCoords = parseCoordinates(validBangunan[0].coordinates)
-                    if (firstCoords) {
-                        setCenter(firstCoords)
-                    }
+                    setCenter(validBangunan[0]._parsedCoords)
+                } else if (validFaslabuh.length > 0) {
+                    setCenter([parseFloat(validFaslabuh[0].lat), parseFloat(validFaslabuh[0].lon)])
+                } else if (validHarkan.length > 0) {
+                    setCenter([parseFloat(validHarkan[0].latitude), parseFloat(validHarkan[0].longitude)])
                 }
 
                 setLoading(false)
@@ -340,7 +395,39 @@ function PetaFaslan({ isDashboard = false, showDisaster = true }) {
         }
 
         fetchData()
-    }, [])
+    }, [isDashboard, showDisaster, refreshKey])
+
+    // Handle map click to assign coordinates
+    const handleMapClickForCoord = useCallback(async (latlng) => {
+        if (!selectedAssetForCoord || coordSaving) return
+        
+        const confirmMsg = `Atur koordinat untuk:\n"${selectedAssetForCoord.nama_satker || selectedAssetForCoord.lokasi_ruang || 'Aset #' + selectedAssetForCoord.id}"\n\nLatitude: ${latlng.lat.toFixed(6)}\nLongitude: ${latlng.lng.toFixed(6)}\n\nLanjutkan?`
+        if (!window.confirm(confirmMsg)) return
+
+        setCoordSaving(true)
+        try {
+            const endpoint = `/api/master-asset-utama/${selectedAssetForCoord.id}/coordinates`
+            const res = await fetch(endpoint, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    latitude: latlng.lat.toFixed(6),
+                    longitude: latlng.lng.toFixed(6)
+                })
+            })
+            if (!res.ok) throw new Error('Gagal menyimpan koordinat')
+            
+            alert(`✅ Koordinat berhasil disimpan!\n${selectedAssetForCoord.nama_satker || 'Aset'}\nLat: ${latlng.lat.toFixed(6)}, Lon: ${latlng.lng.toFixed(6)}`)
+            setSelectedAssetForCoord(null)
+            // Refresh map data
+            setRefreshKey(prev => prev + 1)
+        } catch (err) {
+            console.error('Save coordinate error:', err)
+            alert('❌ Gagal menyimpan koordinat: ' + err.message)
+        } finally {
+            setCoordSaving(false)
+        }
+    }, [selectedAssetForCoord, coordSaving])
 
     const formatLuas = (luas) => {
         if (!luas || luas === '-') return '0'
@@ -387,10 +474,30 @@ function PetaFaslan({ isDashboard = false, showDisaster = true }) {
                     <p style={{ margin: '4px 0 0 18px', fontSize: '13px', color: '#64748b' }}>
                         Visualisasi lokasi aset berdasarkan koordinat GPS
                     </p>
+                    
+                    <div style={{ margin: '10px 0 0 18px', display: 'flex', gap: '8px' }}>
+                        <button 
+                            onClick={() => { setCoordMode(!coordMode); setSelectedAssetForCoord(null); }}
+                            style={{
+                                padding: '6px 14px',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                borderRadius: '20px',
+                                background: coordMode ? '#10b981' : '#f1f5f9',
+                                color: coordMode ? 'white' : '#64748b',
+                                border: '1px solid',
+                                borderColor: coordMode ? '#10b981' : '#e2e8f0',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                            }}
+                        >
+                            {coordMode ? '✕ Tutup Panel' : '📌 Atur Koordinat'}
+                        </button>
+                    </div>
                 </div>
 
                 {/* Inline Stats - Modern 2026 */}
-                <div style={{ display: 'flex', gap: '24px' }}>
+                <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{
                             width: '10px',
@@ -465,8 +572,192 @@ function PetaFaslan({ isDashboard = false, showDisaster = true }) {
             )}
 
 
-            {/* Map Container */}
-            <div style={{ flex: 1, position: 'relative', padding: isDashboard ? '0' : '20px 32px', paddingBottom: isDashboard ? '0' : '32px', minHeight: '400px' }}>
+            {/* Map + Coordinate Panel Container */}
+            <div style={{ flex: 1, display: 'flex', position: 'relative', padding: isDashboard ? '0' : '20px 32px', paddingBottom: isDashboard ? '0' : '32px', minHeight: '400px', gap: '16px' }}>
+
+                {/* Coordinate Setting Side Panel */}
+                {coordMode && !isDashboard && (
+                    <div style={{
+                        width: '360px',
+                        flexShrink: 0,
+                        background: 'white',
+                        borderRadius: '16px',
+                        border: '1px solid #e5e7eb',
+                        boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        overflow: 'hidden'
+                    }}>
+                        {/* Panel Header */}
+                        <div style={{
+                            background: 'linear-gradient(135deg, #10b981, #059669)',
+                            padding: '16px',
+                            color: 'white'
+                        }}>
+                            <div style={{ fontSize: '15px', fontWeight: '700', marginBottom: '4px' }}>📌 Atur Koordinat Aset</div>
+                            <div style={{ fontSize: '12px', opacity: 0.9 }}>
+                                {selectedAssetForCoord 
+                                    ? '👆 Klik lokasi di peta untuk set koordinat' 
+                                    : 'Pilih aset dari daftar di bawah'}
+                            </div>
+                        </div>
+
+                        {/* Selected Asset Indicator */}
+                        {selectedAssetForCoord && (
+                            <div style={{
+                                padding: '12px 16px',
+                                background: '#ecfdf5',
+                                borderBottom: '1px solid #a7f3d0',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: '8px'
+                            }}>
+                                <div>
+                                    <div style={{ fontSize: '11px', fontWeight: '600', color: '#059669', textTransform: 'uppercase' }}>Aset Terpilih</div>
+                                    <div style={{ fontSize: '13px', fontWeight: '700', color: '#065f46', marginTop: '2px' }}>
+                                        {selectedAssetForCoord.nama_satker || selectedAssetForCoord.lokasi_ruang || `ID: ${selectedAssetForCoord.id}`}
+                                    </div>
+                                    <div style={{ fontSize: '11px', color: '#047857' }}>
+                                        {selectedAssetForCoord.jenis_bmn} • {selectedAssetForCoord.kab_kota || '-'}
+                                    </div>
+                                </div>
+                                <button onClick={() => setSelectedAssetForCoord(null)} style={{
+                                    background: '#dc2626', color: 'white', border: 'none', borderRadius: '6px',
+                                    padding: '4px 8px', fontSize: '11px', cursor: 'pointer', fontWeight: '600', flexShrink: 0
+                                }}>✕ Batal</button>
+                            </div>
+                        )}
+
+                        {/* Filter & Search */}
+                        <div style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9' }}>
+                            <input
+                                type="text"
+                                placeholder="🔍 Cari nama, lokasi, kode..."
+                                value={coordSearchTerm}
+                                onChange={e => setCoordSearchTerm(e.target.value)}
+                                style={{
+                                    width: '100%',
+                                    padding: '8px 12px',
+                                    borderRadius: '8px',
+                                    border: '1px solid #e2e8f0',
+                                    fontSize: '13px',
+                                    outline: 'none',
+                                    boxSizing: 'border-box'
+                                }}
+                            />
+                            <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                                {['all', 'TANAH', 'BANGUNAN'].map(ft => (
+                                    <button key={ft} onClick={() => setCoordFilterType(ft)} style={{
+                                        padding: '4px 10px',
+                                        fontSize: '11px',
+                                        fontWeight: '600',
+                                        borderRadius: '12px',
+                                        border: '1px solid',
+                                        borderColor: coordFilterType === ft ? '#0ea5e9' : '#e2e8f0',
+                                        background: coordFilterType === ft ? '#0ea5e9' : 'white',
+                                        color: coordFilterType === ft ? 'white' : '#64748b',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.15s'
+                                    }}>
+                                        {ft === 'all' ? 'Semua' : ft}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Asset List */}
+                        <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
+                            {(() => {
+                                // Filter assets that DON'T have coordinates yet
+                                let filtered = allMasterAssets.filter(a => {
+                                    const hasCoord = a.latitude && a.longitude && !isNaN(parseFloat(a.latitude)) && !isNaN(parseFloat(a.longitude))
+                                    if (coordFilterType !== 'all' && String(a.jenis_bmn).toUpperCase() !== coordFilterType) return false
+                                    if (coordSearchTerm) {
+                                        const search = coordSearchTerm.toLowerCase()
+                                        const haystack = `${a.nama_satker} ${a.lokasi_ruang} ${a.kelurahan_desa} ${a.kab_kota} ${a.kode_barang} ${a.jenis_bmn}`.toLowerCase()
+                                        if (!haystack.includes(search)) return false
+                                    }
+                                    return true
+                                })
+
+                                // Sort: assets without coords first, then with coords
+                                filtered.sort((a, b) => {
+                                    const aHas = a.latitude && a.longitude ? 1 : 0
+                                    const bHas = b.latitude && b.longitude ? 1 : 0
+                                    return aHas - bHas
+                                })
+
+                                const noCoordCount = filtered.filter(a => !a.latitude || !a.longitude).length
+
+                                if (filtered.length === 0) {
+                                    return (
+                                        <div style={{ textAlign: 'center', padding: '20px', color: '#94a3b8', fontSize: '13px' }}>
+                                            Tidak ada aset ditemukan
+                                        </div>
+                                    )
+                                }
+
+                                return (
+                                    <>
+                                        <div style={{ padding: '4px 8px 8px', fontSize: '11px', color: '#94a3b8' }}>
+                                            {noCoordCount} aset belum ada koordinat dari {filtered.length} total
+                                        </div>
+                                        {filtered.map(asset => {
+                                            const hasCoord = asset.latitude && asset.longitude && !isNaN(parseFloat(asset.latitude)) && !isNaN(parseFloat(asset.longitude))
+                                            const isSelected = selectedAssetForCoord?.id === asset.id
+                                            return (
+                                                <div
+                                                    key={asset.id}
+                                                    onClick={() => setSelectedAssetForCoord(asset)}
+                                                    style={{
+                                                        padding: '10px 12px',
+                                                        borderRadius: '10px',
+                                                        marginBottom: '4px',
+                                                        cursor: 'pointer',
+                                                        background: isSelected ? '#ecfdf5' : hasCoord ? '#f0fdf4' : '#fff',
+                                                        border: isSelected ? '2px solid #10b981' : '1px solid ' + (hasCoord ? '#bbf7d0' : '#f1f5f9'),
+                                                        transition: 'all 0.15s'
+                                                    }}
+                                                >
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                        <div style={{ flex: 1 }}>
+                                                            <div style={{ fontSize: '13px', fontWeight: '600', color: '#1e293b', lineHeight: '1.3' }}>
+                                                                {asset.nama_satker || asset.lokasi_ruang || `Aset #${asset.id}`}
+                                                            </div>
+                                                            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                                                                {type} • {lokasi}
+                                                            </div>
+                                                            {hasCoord && (
+                                                                <div style={{ fontSize: '10px', color: '#10b981', marginTop: '3px', fontFamily: 'monospace' }}>
+                                                                    ✅ {coordDisplay}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <span style={{
+                                                            fontSize: '10px',
+                                                            fontWeight: '600',
+                                                            padding: '2px 6px',
+                                                            borderRadius: '6px',
+                                                            background: hasCoord ? '#dcfce7' : '#fef3c7',
+                                                            color: hasCoord ? '#15803d' : '#b45309',
+                                                            flexShrink: 0
+                                                        }}>
+                                                            {hasCoord ? '📍' : '⚠️'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </>
+                                )
+                            })()}
+                        </div>
+                    </div>
+                )}
+
+                {/* Map wrapper */}
+                <div style={{ flex: 1, position: 'relative', minHeight: '400px' }}>
                 <div style={{
                     height: '100%',
                     minHeight: '400px',
@@ -556,10 +847,11 @@ function PetaFaslan({ isDashboard = false, showDisaster = true }) {
                     <MapContainer
                         center={[-6.1754, 106.8272]} // Static initial center (Central Jakarta)
                         zoom={12}
-                        style={{ height: '100%', width: '100%', minHeight: '400px' }}
+                        style={{ height: '100%', width: '100%', minHeight: '400px', cursor: coordMode && selectedAssetForCoord ? 'crosshair' : '' }}
                         scrollWheelZoom={true}
                     >
                         <ChangeView center={center} />
+                        <MapClickHandler active={coordMode && !!selectedAssetForCoord} onMapClick={handleMapClickForCoord} />
                         <TileLayer
                             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -583,11 +875,11 @@ function PetaFaslan({ isDashboard = false, showDisaster = true }) {
 
                         {/* Markers for Aset Tanah */}
                         {assetsTanah.map((asset) => {
-                            const coords = parseCoordinates(asset.coordinates)
+                            const coords = asset._parsedCoords || parseCoordinates(asset.coordinates)
                             if (!coords) return null
 
                             return (
-                                <Marker key={`tanah-${asset.id}`} position={coords} icon={tanahIcon}>
+                                <Marker key={`tanah-${asset.id || asset.unique_key}`} position={coords} icon={tanahIcon}>
                                     <Popup>
                                         <div style={{ minWidth: '200px' }}>
                                             <div style={{
@@ -603,13 +895,13 @@ function PetaFaslan({ isDashboard = false, showDisaster = true }) {
                                             <div style={{ marginBottom: '6px' }}>
                                                 <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: '600' }}>Nama</div>
                                                 <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>
-                                                    {asset.name || '-'}
+                                                    {asset.name || asset.nama_satker || '-'}
                                                 </div>
                                             </div>
                                             <div style={{ marginBottom: '6px' }}>
-                                                <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: '600' }}>Jenis</div>
+                                                <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: '600' }}>Kode Barang</div>
                                                 <div style={{ fontSize: '13px', color: '#4b5563' }}>
-                                                    {asset.category || '-'}
+                                                    {asset.kode_barang || '-'}
                                                 </div>
                                             </div>
                                             <div>
@@ -626,11 +918,11 @@ function PetaFaslan({ isDashboard = false, showDisaster = true }) {
 
                         {/* Markers for Aset Bangunan */}
                         {assetsBangunan.map((asset) => {
-                            const coords = parseCoordinates(asset.coordinates)
+                            const coords = asset._parsedCoords || parseCoordinates(asset.coordinates)
                             if (!coords) return null
 
                             return (
-                                <Marker key={`bangunan-${asset.id}`} position={coords} icon={bangunanIcon}>
+                                <Marker key={`bangunan-${asset.id || asset.unique_key}`} position={coords} icon={bangunanIcon}>
                                     <Popup>
                                         <div style={{ minWidth: '200px' }}>
                                             <div style={{
@@ -646,19 +938,19 @@ function PetaFaslan({ isDashboard = false, showDisaster = true }) {
                                             <div style={{ marginBottom: '6px' }}>
                                                 <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: '600' }}>Nama</div>
                                                 <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>
-                                                    {asset.name || '-'}
+                                                    {asset.name || asset.nama_satker || '-'}
                                                 </div>
                                             </div>
                                             <div style={{ marginBottom: '6px' }}>
-                                                <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: '600' }}>Jenis</div>
+                                                <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: '600' }}>Kode Barang</div>
                                                 <div style={{ fontSize: '13px', color: '#4b5563' }}>
-                                                    {asset.category || '-'}
+                                                    {asset.kode_barang || '-'}
                                                 </div>
                                             </div>
                                             <div>
                                                 <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: '600' }}>Luas</div>
                                                 <div style={{ fontSize: '16px', fontWeight: '700', color: '#f97316' }}>
-                                                    {formatLuas(asset.luas_tanah_seluruhnya || asset.luas)} m²
+                                                    {formatLuas(asset.luas_bangunan || asset.luas)} m²
                                                 </div>
                                             </div>
                                         </div>
@@ -848,9 +1140,35 @@ function PetaFaslan({ isDashboard = false, showDisaster = true }) {
                             )
                         })}
                     </MapContainer>
-                </div>
-            </div>
 
+                    {/* Coordinate mode banner */}
+                    {coordMode && selectedAssetForCoord && (
+                        <div style={{
+                            position: 'absolute',
+                            top: '12px',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            background: 'rgba(16, 185, 129, 0.95)',
+                            color: 'white',
+                            padding: '8px 20px',
+                            borderRadius: '24px',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            zIndex: 1000,
+                            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
+                            backdropFilter: 'blur(8px)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            whiteSpace: 'nowrap'
+                        }}>
+                            <span style={{ animation: 'pulse 2s infinite' }}>📌</span>
+                            Klik peta untuk set lokasi: {selectedAssetForCoord.nama_satker || selectedAssetForCoord.lokasi_ruang || `Aset #${selectedAssetForCoord.id}`}
+                        </div>
+                    )}
+                </div>
+                </div>{/* close Map wrapper */}
+            </div>
             {/* Detail Modal Overlay */}
             {
                 selectedFaslabuh && (

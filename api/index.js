@@ -753,6 +753,28 @@ app.put('/api/assets/tanah/:id', async (req, res) => {
     }
 });
 
+// Update Tanah Asset Coordinates directly (from Map)
+app.patch('/api/assets/tanah/:id/coordinates', async (req, res) => {
+    const { id } = req.params;
+    const { coordinates } = req.body; 
+    
+    try {
+        const result = await pool.query(
+            'UPDATE assets_tanah SET coordinates = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+            [coordinates, id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Asset not found' });
+        }
+
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('[ASSETS TANAH] Patch coordinates error:', err);
+        res.status(500).json({ error: 'Internal server error', details: err.message });
+    }
+});
+
 // Delete Tanah Asset
 app.delete('/api/assets/tanah/:id', async (req, res) => {
     const { id } = req.params;

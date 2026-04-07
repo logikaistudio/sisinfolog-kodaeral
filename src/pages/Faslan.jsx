@@ -53,6 +53,22 @@ function Faslan({ type }) {
                         return searchStr.includes('lagoa')
                     })
                     setData(filtered)
+                } else if (type === 'tanah') {
+                    // Mapping field assets_tanah:
+                    // - coordinates: ambil dari field 'location' yang berisi DMS string
+                    // - alamat/name: ambil dari field 'name', 'alamat_detail', 'area'
+                    const mapped = result.map(item => ({
+                        ...item,
+                        // Koordinat dari field 'location' (bukan alamat, melainkan string DMS)
+                        coordinates: item.location || item.coordinates || '-',
+                        // Alamat dari name, bukan location
+                        location: item.alamat_detail || item.area || item.name || '-',
+                        // Pastikan name tetap ada
+                        name: item.name || item.nama_barang || '-',
+                        // Luas dari luas_tanah_seluruhnya
+                        luas: item.luas_tanah_seluruhnya || item.luas || '0',
+                    }))
+                    setData(mapped)
                 } else {
                     setData(result)
                 }
