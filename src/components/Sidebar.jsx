@@ -1,11 +1,42 @@
 import PropTypes from 'prop-types'
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 
 function Sidebar({ currentPage, setCurrentPage, collapsed, setCollapsed, mobileOpen, setMobileOpen, onLogout, user }) {
     // State untuk menyimpan ID menu yang sedang expanded (bisa multiple levels)
     const [expandedMenus, setExpandedMenus] = useState(['faslan', 'fastanah-parent', 'faslan-rumneg-parent', 'satharkan'])
+    const [rumnegAreas, setRumnegAreas] = useState([])
 
-    const menuItems = [
+    useEffect(() => {
+        const fetchRumnegAreas = async () => {
+            try {
+                const response = await fetch('/api/assets/rumneg');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (Array.isArray(data)) {
+                        // Extract unique non-empty areas (case-insensitive deduplication)
+                        const areaSet = new Set();
+                        const uniqueAreas = [];
+                        data.forEach(item => {
+                            const areaName = (item.area || '').trim();
+                            if (areaName) {
+                                const lower = areaName.toLowerCase();
+                                if (!areaSet.has(lower)) {
+                                    areaSet.add(lower);
+                                    uniqueAreas.push(areaName);
+                                }
+                            }
+                        });
+                        setRumnegAreas(uniqueAreas.sort());
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching rumneg areas:', error);
+            }
+        };
+        fetchRumnegAreas();
+    }, []);
+
+    const menuItems = useMemo(() => [
         {
             id: 'dashboard-pimpinan',
             label: 'Dashboard Pimpinan',
@@ -31,8 +62,12 @@ function Sidebar({ currentPage, setCurrentPage, collapsed, setCollapsed, mobileO
                             id: 'faslan-rumneg-parent',
                             label: 'Aset Rumah Negara',
                             icon: '🏠',
-                            children: [
-                                { id: 'faslan-rumneg-lagoa', label: 'Rumneg Lagoa', icon: '🏘️' }
+                            children: rumnegAreas.length > 0 ? rumnegAreas.map(area => ({
+                                id: `faslan-rumneg:dynamic:${area}`,
+                                label: `Perumahan ${area}`,
+                                icon: '🏘️'
+                            })) : [
+                                { id: 'faslan-rumneg:dynamic:Lagoa', label: 'Perumahan Lagoa', icon: '🏘️' } // Default if empty
                             ]
                         },
                         { id: 'faslan-kerjasama', label: 'Pemanfaatan Aset', icon: '🤝' }
@@ -98,7 +133,7 @@ function Sidebar({ currentPage, setCurrentPage, collapsed, setCollapsed, mobileO
                 { id: 'pengaturan-roles', label: 'Role Management', icon: '🛡️' }
             ]
         }
-    ]
+    ], [rumnegAreas])
 
     const handleMenuClick = (item, hasChildren) => {
         if (hasChildren) {

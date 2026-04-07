@@ -281,7 +281,8 @@ function MasterRumneg() {
             const getValue = (row, keys) => {
                 const rowKeys = Object.keys(row);
                 for (const key of keys) {
-                    const foundKey = rowKeys.find(k => k.trim().toLowerCase() === key.toLowerCase());
+                    const normalizedKey = key.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+                    const foundKey = rowKeys.find(k => k.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() === normalizedKey);
                     if (foundKey) return row[foundKey];
                 }
                 return '';
@@ -297,8 +298,8 @@ function MasterRumneg() {
                 longitude: getValue(row, ['LON', 'lon', 'longitude', 'Longitude']),
                 latitude: getValue(row, ['LAT', 'lat', 'latitude', 'Latitude']),
                 status_penghuni: getValue(row, ['STATUS PENGHUNI', 'status penghuni', 'Status']),
-                no_sip: getValue(row, ['NO SIP', 'no sip', 'Nomor SIP']),
-                tgl_sip: getValue(row, ['TGL SIP', 'tgl sip', 'Tanggal SIP']),
+                no_sip: getValue(row, ['NO SIP/TANGGAL', 'no sip/tanggal', 'nosiptanggal', 'no. sip/tanggal', 'NO SIP', 'no sip', 'nomor sip', 'nosip']),
+                tgl_sip: getValue(row, ['TGL SIP', 'tglsip', 'tanggal sip', 'tgl', 'tanggal']),
                 tipe_rumah: getValue(row, ['TIPE', 'tipe', 'Type']),
                 golongan: getValue(row, ['GOLONGAN', 'golongan', 'Gol']),
                 tahun_buat: getValue(row, ['TAHUN BUAT', 'tahun buat', 'Tahun']),

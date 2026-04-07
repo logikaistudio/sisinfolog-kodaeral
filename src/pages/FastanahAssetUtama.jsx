@@ -32,13 +32,13 @@ function FastanahAssetUtama() {
                         
                         // Status Sertifikasi
                         let statusSertifikasi = 'Belum Bersertifikat';
-                        if (item.sertifikat || item.no_identitas) {
+                        if (item.no_sertifikat || item.no_dokumen || (item.jenis_dokumen && item.jenis_dokumen.includes('Bersertifikat'))) {
                             statusSertifikasi = 'Bersertifikat';
                         }
                         
-                        const area = item.provinsi || item.uraian_kanwil_djkn || 'Provinsi Tidak Diketahui';
+                        const area = item.kab_kota || item.provinsi || item.uraian_kanwil_djkn || 'Lokasi Tidak Diketahui';
 
-                        const nama_bangunan = item.nama_satker || item.uraian_kpknl || 'Aset Tanah';
+                        const nama_bangunan = item.nama_barang || item.nama_satker || 'Aset Tanah';
 
                         return {
                             id: item.id,
@@ -47,7 +47,9 @@ function FastanahAssetUtama() {
                             nama_bangunan: nama_bangunan,
                             alamat_lengkap: alamatLengkap,
                             luas_tanah: parseFloat(item.luas_tanah_seluruhnya || 0),
-                            no_psp: item.sbsk || '-',
+                            no_psp: item.no_psp || '-',
+                            jenis_dokumen: item.jenis_dokumen || '-',
+                            no_dokumen: item.no_sertifikat || item.no_dokumen || '-',
                             status_sertifikasi: statusSertifikasi,
                             area: area
                         };
@@ -199,19 +201,28 @@ function FastanahAssetUtama() {
                                                         </td>
                                                         <td style={tdStyle}>
                                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>PSP: {asset.no_psp}</span>
-                                                                <span style={{
-                                                                    display: 'inline-block',
-                                                                    padding: '3px 8px',
-                                                                    borderRadius: '4px',
-                                                                    fontSize: '0.7rem',
-                                                                    fontWeight: '600',
-                                                                    background: asset.status_sertifikasi === 'Bersertifikat' ? '#dcfce7' : '#fee2e2',
-                                                                    color: asset.status_sertifikasi === 'Bersertifikat' ? '#166534' : '#991b1b',
-                                                                    width: 'fit-content'
-                                                                }}>
-                                                                    {asset.status_sertifikasi}
+                                                                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                                                    <strong>PSP:</strong> {asset.no_psp}
                                                                 </span>
+                                                                <span style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: '1.3' }}>
+                                                                    <strong>Dokumen:</strong> {asset.jenis_dokumen}<br/>
+                                                                    {asset.no_dokumen !== '-' && <span style={{color: '#94a3b8'}}>{asset.no_dokumen}</span>}
+                                                                </span>
+                                                                {asset.status_sertifikasi === 'Bersertifikat' && (
+                                                                    <span style={{
+                                                                        display: 'inline-block',
+                                                                        padding: '3px 8px',
+                                                                        borderRadius: '4px',
+                                                                        fontSize: '0.7rem',
+                                                                        fontWeight: '600',
+                                                                        background: '#dcfce7',
+                                                                        color: '#166534',
+                                                                        width: 'fit-content',
+                                                                        marginTop: '2px'
+                                                                    }}>
+                                                                        {asset.status_sertifikasi}
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                         </td>
                                                     </tr>

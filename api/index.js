@@ -2300,22 +2300,22 @@ app.get('/api/assets/rumneg', async (req, res) => {
                 await pool.query(`
                     CREATE TABLE IF NOT EXISTS assets_rumneg (
                         id SERIAL PRIMARY KEY,
-                        occupant_name VARCHAR(255),
-                        occupant_rank VARCHAR(100),
-                        occupant_nrp VARCHAR(100),
-                        area VARCHAR(100),
+                        occupant_name TEXT,
+                        occupant_rank TEXT,
+                        occupant_nrp TEXT,
+                        area TEXT,
                         alamat_detail TEXT,
-                        longitude VARCHAR(50),
-                        latitude VARCHAR(50),
-                        status_penghuni VARCHAR(50),
-                        no_sip VARCHAR(100),
-                        tgl_sip VARCHAR(50),
-                        tipe_rumah VARCHAR(50),
-                        golongan VARCHAR(50),
-                        tahun_buat VARCHAR(50),
-                        asal_perolehan VARCHAR(100),
-                        mendapat_fasdin VARCHAR(50),
-                        kondisi VARCHAR(50),
+                        longitude TEXT,
+                        latitude TEXT,
+                        status_penghuni TEXT,
+                        no_sip TEXT,
+                        tgl_sip TEXT,
+                        tipe_rumah TEXT,
+                        golongan TEXT,
+                        tahun_buat TEXT,
+                        asal_perolehan TEXT,
+                        mendapat_fasdin TEXT,
+                        kondisi TEXT,
                         keterangan TEXT,
                         created_at TIMESTAMP DEFAULT NOW(),
                         updated_at TIMESTAMP DEFAULT NOW()
@@ -2345,27 +2345,33 @@ app.post('/api/assets/rumneg/bulk', async (req, res) => {
         await client.query(`
             CREATE TABLE IF NOT EXISTS assets_rumneg (
                 id SERIAL PRIMARY KEY,
-                occupant_name VARCHAR(255),
-                occupant_rank VARCHAR(100),
-                occupant_nrp VARCHAR(100),
-                area VARCHAR(100),
+                occupant_name TEXT,
+                occupant_rank TEXT,
+                occupant_nrp TEXT,
+                area TEXT,
                 alamat_detail TEXT,
-                longitude VARCHAR(50),
-                latitude VARCHAR(50),
-                status_penghuni VARCHAR(50),
-                no_sip VARCHAR(100),
-                tgl_sip VARCHAR(50),
-                tipe_rumah VARCHAR(50),
-                golongan VARCHAR(50),
-                tahun_buat VARCHAR(50),
-                asal_perolehan VARCHAR(100),
-                mendapat_fasdin VARCHAR(50),
-                kondisi VARCHAR(50),
+                longitude TEXT,
+                latitude TEXT,
+                status_penghuni TEXT,
+                no_sip TEXT,
+                tgl_sip TEXT,
+                tipe_rumah TEXT,
+                golongan TEXT,
+                tahun_buat TEXT,
+                asal_perolehan TEXT,
+                mendapat_fasdin TEXT,
+                kondisi TEXT,
                 keterangan TEXT,
                 created_at TIMESTAMP DEFAULT NOW(),
                 updated_at TIMESTAMP DEFAULT NOW()
             );
         `);
+
+        // Overwrite strategy: first delete all existing data for the areas being imported
+        const areasToReplace = [...new Set(items.map(item => item.area).filter(Boolean))];
+        for (const area of areasToReplace) {
+            await client.query('DELETE FROM assets_rumneg WHERE area = $1', [area]);
+        }
 
         for (const item of items) {
             await client.query(

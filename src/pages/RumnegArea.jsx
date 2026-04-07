@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 
-function RumnegLagoa() {
+import PropTypes from 'prop-types';
+
+function RumnegArea({ area }) {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(false);
 
@@ -17,15 +19,15 @@ function RumnegLagoa() {
 
             const result = await response.json();
 
-            // FILTER ONLY LAGOA DATA
-            // Checks if 'area' or 'alamat_detail' contains 'lagoa' (case insensitive)
-            const lagoaData = Array.isArray(result) ? result.filter(item => {
-                const area = (item.area || '').toLowerCase();
-                const alamat = (item.alamat_detail || '').toLowerCase();
-                return area.includes('lagoa') || alamat.includes('lagoa');
+            // FILTER BASED ON AREA PROP
+            const areaData = Array.isArray(result) ? result.filter(item => {
+                const itemArea = (item.area || '').toLowerCase();
+                const itemAlamat = (item.alamat_detail || '').toLowerCase();
+                const target = (area || '').toLowerCase();
+                return itemArea.includes(target) || itemAlamat.includes(target);
             }) : [];
 
-            setData(lagoaData);
+            setData(areaData);
         } catch (error) {
             console.error('Error fetching data:', error);
             setData([]);
@@ -36,7 +38,7 @@ function RumnegLagoa() {
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [area]);
 
     // --- STATS CALCULATION ---
     const stats = {
@@ -94,8 +96,8 @@ function RumnegLagoa() {
             {/* Header */}
             <div className="page-header" style={{ marginBottom: '24px' }}>
                 <div>
-                    <h1 className="page-title">Aset Rumah Negara - Lagoa</h1>
-                    <p className="page-subtitle">Monitoring dan Data Penghuni Komplek Lagoa</p>
+                    <h1 className="page-title">Aset Rumah Negara - {area}</h1>
+                    <p className="page-subtitle">Monitoring dan Data Penghuni Komplek {area}</p>
                 </div>
             </div>
 
@@ -167,6 +169,7 @@ function RumnegLagoa() {
                             <th style={{ padding: '0 16px', textAlign: 'left', width: '50px', color: '#64748b' }}>No</th>
                             <th style={{ padding: '0 16px', textAlign: 'left', color: '#475569' }}>Nama Penghuni</th>
                             <th style={{ padding: '0 16px', textAlign: 'left', color: '#475569' }}>Alamat</th>
+                            <th style={{ padding: '0 16px', textAlign: 'left', color: '#475569' }}>No SIP & Tgl</th>
                             <th style={{ padding: '0 16px', textAlign: 'center', width: '100px', color: '#475569' }}>Tipe</th>
                             <th style={{ padding: '0 16px', textAlign: 'center', width: '120px', color: '#475569' }}>Kondisi</th>
                         </tr>
@@ -175,7 +178,7 @@ function RumnegLagoa() {
                         {loading && data.length === 0 ? (
                             <tr><td colSpan="5" style={{ padding: '24px', textAlign: 'center', color: '#94a3b8' }}>Memuat data...</td></tr>
                         ) : data.length === 0 ? (
-                            <tr><td colSpan="5" style={{ padding: '24px', textAlign: 'center', color: '#94a3b8' }}>Tidak ada data untuk area Lagoa</td></tr>
+                            <tr><td colSpan="5" style={{ padding: '24px', textAlign: 'center', color: '#94a3b8' }}>Tidak ada data untuk area {area}</td></tr>
                         ) : (
                             data.map((row, index) => (
                                 <tr
@@ -191,6 +194,10 @@ function RumnegLagoa() {
                                         <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{row.occupant_rank} {row.occupant_nrp ? `(${row.occupant_nrp})` : ''}</div>
                                     </td>
                                     <td style={{ padding: '0 16px', color: '#334155' }}>{row.alamat_detail || '-'}</td>
+                                    <td style={{ padding: '0 16px', color: '#334155' }}>
+                                        <div style={{ fontWeight: '500', color: '#1e293b' }}>{row.no_sip || '-'}</div>
+                                        {row.tgl_sip && <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{row.tgl_sip}</div>}
+                                    </td>
                                     <td style={{ padding: '0 16px', textAlign: 'center', color: '#475569' }}>{row.tipe_rumah || '-'}</td>
                                     <td style={{ padding: '0 16px', textAlign: 'center' }}>
                                         <span style={{
@@ -264,6 +271,23 @@ function RumnegLagoa() {
                                 </select>
                             </div>
                             <div>
+                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '6px', color: '#475569' }}>No SIP & Tgl</label>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <input
+                                        placeholder="Nomor SIP"
+                                        value={currentItem.no_sip || ''}
+                                        onChange={(e) => handleInputChange('no_sip', e.target.value)}
+                                        style={{ flex: 1, padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                                    />
+                                    <input
+                                        placeholder="Tgl (Opsional)"
+                                        value={currentItem.tgl_sip || ''}
+                                        onChange={(e) => handleInputChange('tgl_sip', e.target.value)}
+                                        style={{ width: '120px', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                                    />
+                                </div>
+                            </div>
+                            <div>
                                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '6px', color: '#475569' }}>Kondisi Bangunan</label>
                                 <select
                                     value={currentItem.kondisi || ''}
@@ -289,4 +313,8 @@ function RumnegLagoa() {
     );
 }
 
-export default RumnegLagoa;
+RumnegArea.propTypes = {
+    area: PropTypes.string.isRequired
+};
+
+export default RumnegArea;

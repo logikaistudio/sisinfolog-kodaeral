@@ -19,7 +19,7 @@ import MasterAssetList from './pages/MasterAssetList'
 import MasterAssetUtama from './pages/MasterAssetUtama'
 import FastanahAssetUtama from './pages/FastanahAssetUtama'
 import MasterRumneg from './pages/MasterRumneg'
-import RumnegLagoa from './pages/RumnegLagoa'
+import RumnegArea from './pages/RumnegArea'
 import AssetDetail from './pages/AssetDetail'
 import PengaturanUsers from './pages/PengaturanUsers'
 import PengaturanRoles from './pages/PengaturanRoles'
@@ -95,8 +95,6 @@ function App() {
         return <FastanahAssetUtama />
       case 'faslan-kapling':
         return <Faslan type="kapling" />
-      case 'faslan-rumneg-lagoa':
-        return <RumnegLagoa />
       case 'faslan-faslabuh':
         return <Faslabuh />
       case 'faslan-kerjasama':
@@ -136,6 +134,10 @@ function App() {
       case 'pengaturan-roles':
         return <PengaturanRoles />
       default:
+        if (currentPage.startsWith('faslan-rumneg:dynamic:')) {
+          const areaName = currentPage.replace('faslan-rumneg:dynamic:', '');
+          return <RumnegArea area={areaName} />
+        }
         return <PetaFaslan />
     }
   }
