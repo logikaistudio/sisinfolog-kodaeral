@@ -2373,20 +2373,32 @@ app.post('/api/assets/rumneg/bulk', async (req, res) => {
             await client.query('DELETE FROM assets_rumneg WHERE area = $1', [area]);
         }
 
-        for (const item of items) {
+        // Chunk inserts to handle large imports quickly and avoid Vercel timeouts (504)
+        const CHUNK_SIZE = 100;
+        for (let i = 0; i < items.length; i += CHUNK_SIZE) {
+            const chunk = items.slice(i, i + CHUNK_SIZE);
+            const valueStrings = [];
+            const flatValues = [];
+            let paramIndex = 1;
+
+            for (const item of chunk) {
+                valueStrings.push(`($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`);
+                flatValues.push(
+                    item.occupant_name ?? null, item.occupant_rank ?? null, item.occupant_nrp ?? null, item.area ?? null, item.alamat_detail ?? null,
+                    item.longitude ?? null, item.latitude ?? null, item.status_penghuni ?? null, item.no_sip ?? null, item.tgl_sip ?? null,
+                    item.tipe_rumah ?? null, item.golongan ?? null, item.tahun_buat ?? null, item.asal_perolehan ?? null, item.mendapat_fasdin ?? null,
+                    item.kondisi ?? null, item.keterangan ?? null
+                );
+            }
+
             await client.query(
                 `INSERT INTO assets_rumneg (
                     occupant_name, occupant_rank, occupant_nrp, area, alamat_detail,
                     longitude, latitude, status_penghuni, no_sip, tgl_sip,
                     tipe_rumah, golongan, tahun_buat, asal_perolehan, mendapat_fasdin,
                     kondisi, keterangan
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
-                [
-                    item.occupant_name ?? null, item.occupant_rank ?? null, item.occupant_nrp ?? null, item.area ?? null, item.alamat_detail ?? null,
-                    item.longitude ?? null, item.latitude ?? null, item.status_penghuni ?? null, item.no_sip ?? null, item.tgl_sip ?? null,
-                    item.tipe_rumah ?? null, item.golongan ?? null, item.tahun_buat ?? null, item.asal_perolehan ?? null, item.mendapat_fasdin ?? null,
-                    item.kondisi ?? null, item.keterangan ?? null
-                ]
+                ) VALUES ${valueStrings.join(', ')}`,
+                flatValues
             );
         }
         await client.query('COMMIT');
