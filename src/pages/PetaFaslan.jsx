@@ -15,38 +15,58 @@ L.Icon.Default.mergeOptions({
     shadowUrl: markerShadow,
 })
 
-// Custom dot icons for different asset types - small circles
-const tanahIcon = new L.Icon({
-    iconUrl: 'data:image/svg+xml;base64,' + btoa(`
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14">
-            <circle cx="7" cy="7" r="6" fill="#0ea5e9" stroke="#fff" stroke-width="2"/>
-        </svg>
-    `),
-    iconSize: [14, 14],
-    iconAnchor: [7, 7],
-    popupAnchor: [0, -10]
-})
+const mapLanalColor = (lanal) => {
+    if (!lanal) return '#0ea5e9' // default blue
+    const name = String(lanal).toLowerCase()
+    if (name.includes('banten')) return '#3b82f6' // biru
+    if (name.includes('lampung')) return '#10b981' // hijau
+    if (name.includes('jakarta') || name.includes('tanjung priok')) return '#f59e0b' // kuning/amber
+    if (name.includes('cirebon')) return '#8b5cf6' // ungu
+    if (name.includes('palembang')) return '#ec4899' // pink
+    if (name.includes('bengkulu')) return '#f43f5e' // rose
+    if (name.includes('bangka') || name.includes('belitung')) return '#14b8a6' // teal
+    if (name.includes('bandung')) return '#6366f1' // indigo
+    if (name.includes('pontianak')) return '#d946ef' // fuchsia
+    return '#64748b' // default slate
+}
+    
+const createDynamicIcon = (color) => {
+    // Ukuran 50% dari origin (7x7 dari 14x14)
+    return new L.Icon({
+        iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+            <svg xmlns="http://www.w3.org/2000/svg" width="7" height="7" viewBox="0 0 14 14">
+                <circle cx="7" cy="7" r="6" fill="${color}" stroke="#fff" stroke-width="2"/>
+            </svg>
+        `),
+        iconSize: [7, 7],
+        iconAnchor: [3.5, 3.5],
+        popupAnchor: [0, -5]
+    })
+}
+
+// Fallback old icon just in case
+const tanahIcon = createDynamicIcon('#0ea5e9')
 
 const bangunanIcon = new L.Icon({
     iconUrl: 'data:image/svg+xml;base64,' + btoa(`
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14">
+        <svg xmlns="http://www.w3.org/2000/svg" width="7" height="7" viewBox="0 0 14 14">
             <circle cx="7" cy="7" r="6" fill="#f97316" stroke="#fff" stroke-width="2"/>
         </svg>
     `),
-    iconSize: [14, 14],
-    iconAnchor: [7, 7],
-    popupAnchor: [0, -10]
+    iconSize: [7, 7],
+    iconAnchor: [3.5, 3.5],
+    popupAnchor: [0, -5]
 })
 
 const perumahanIcon = new L.Icon({
     iconUrl: 'data:image/svg+xml;base64,' + btoa(`
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14">
+        <svg xmlns="http://www.w3.org/2000/svg" width="7" height="7" viewBox="0 0 14 14">
             <circle cx="7" cy="7" r="6" fill="#10b981" stroke="#fff" stroke-width="2"/>
         </svg>
     `),
-    iconSize: [14, 14],
-    iconAnchor: [7, 7],
-    popupAnchor: [0, -10]
+    iconSize: [7, 7],
+    iconAnchor: [3.5, 3.5],
+    popupAnchor: [0, -5]
 })
 
 // Configurable Node Settings moved to state
@@ -315,16 +335,12 @@ function PetaFaslan({ isDashboard = false, showDisaster = true }) {
                     }
                 }
 
-                // Fetch Aset Tanah from master data aset (assets/tanah)
-                const endpointTanah = '/api/assets/tanah'
-                const finalEndpointTanah = import.meta.env.PROD ? endpointTanah : `http://localhost:3001${endpointTanah}`
-                const dataTanah = await safeFetchStatus(finalEndpointTanah)
-
-                // Fetch Aset Bangunan from master data utama (bangunan still from master_asset_utama)
+                // Fetch Aset Tanah and Bangunan from Master Data Utama
                 const endpointMaster = '/api/master-asset-utama'
                 const finalEndpointMaster = import.meta.env.PROD ? endpointMaster : `http://localhost:3001${endpointMaster}`
                 const dataMaster = await safeFetchStatus(finalEndpointMaster)
-                const dataBangunan = dataMaster.filter(d => String(d.jenis_bmn).toUpperCase() === 'BANGUNAN')
+                const dataTanah = dataMaster.filter(d => d.jenis_bmn && String(d.jenis_bmn).toUpperCase().includes('TANAH'))
+                const dataBangunan = dataMaster.filter(d => d.jenis_bmn && String(d.jenis_bmn).toUpperCase().includes('BANGUNAN'))
 
                 // Store all for coordinate-setting panel
                 setAllMasterAssets([...dataTanah, ...dataBangunan])
@@ -358,9 +374,14 @@ function PetaFaslan({ isDashboard = false, showDisaster = true }) {
                 })
                 setAssetsRumneg(validRumneg)
 
-                // Filter assets_tanah — koordinat dari field 'location' (DMS) atau 'coordinates'
+                // Filter assets_tanah — support new longitude/latitude fields, fallback to location or coordinates
                 const validTanah = dataTanah.filter(asset => {
-                    // Cek field coordinates dulu
+                    // Cek field latitude/longitude dari DB Master Asset Utama
+                    if (asset.latitude && asset.longitude && !isNaN(parseFloat(asset.latitude)) && !isNaN(parseFloat(asset.longitude))) {
+                        asset._parsedCoords = [parseFloat(asset.latitude), parseFloat(asset.longitude)]
+                        return true
+                    }
+                    // Cek field coordinates dulu (legacy)
                     if (asset.coordinates && asset.coordinates !== '-') {
                         const coords = parseCoordinates(asset.coordinates)
                         if (coords) {
@@ -368,7 +389,7 @@ function PetaFaslan({ isDashboard = false, showDisaster = true }) {
                             return true
                         }
                     }
-                    // Fallback: coba field location yang berisi DMS
+                    // Fallback: coba field location yang berisi DMS (legacy)
                     if (asset.location) {
                         const coords = parseCoordinates(asset.location)
                         if (coords) {
@@ -923,8 +944,10 @@ function PetaFaslan({ isDashboard = false, showDisaster = true }) {
                             const coords = asset._parsedCoords || parseCoordinates(asset.coordinates)
                             if (!coords) return null
 
+                            const lanalColor = mapLanalColor(asset.lanal)
+
                             return (
-                                <Marker key={`tanah-${asset.id || asset.unique_key}`} position={coords} icon={tanahIcon}>
+                                <Marker key={`tanah-${asset.id || asset.unique_key}`} position={coords} icon={createDynamicIcon(lanalColor)}>
                                     <Popup>
                                         <div style={{ minWidth: '200px' }}>
                                             <div style={{
