@@ -140,19 +140,11 @@ function FastanahAssetUtama() {
 
         const reader = new FileReader();
         reader.onload = (ev) => {
-            const img = new Image();
-            img.onload = () => {
-                if (img.width >= img.height) {
-                    alert('Foto harus dalam orientasi portrait (tinggi lebih besar dari lebar).');
-                    return;
-                }
-                setPhotos(prev => [...prev, {
-                    base64: ev.target.result,
-                    name: file.name,
-                    size: file.size,
-                }]);
-            };
-            img.src = ev.target.result;
+            setPhotos(prev => [...prev, {
+                base64: ev.target.result,
+                name: file.name,
+                size: file.size,
+            }]);
         };
         reader.readAsDataURL(file);
     };
