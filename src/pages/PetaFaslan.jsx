@@ -31,16 +31,16 @@ const mapLanalColor = (lanal) => {
 }
     
 const createDynamicIcon = (color) => {
-    // Ukuran 50% dari origin (7x7 dari 14x14)
+    // Ukuran 2x jadi 14x14
     return new L.Icon({
         iconUrl: 'data:image/svg+xml;base64,' + btoa(`
-            <svg xmlns="http://www.w3.org/2000/svg" width="7" height="7" viewBox="0 0 14 14">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14">
                 <circle cx="7" cy="7" r="6" fill="${color}" stroke="#fff" stroke-width="2"/>
             </svg>
         `),
-        iconSize: [7, 7],
-        iconAnchor: [3.5, 3.5],
-        popupAnchor: [0, -5]
+        iconSize: [14, 14],
+        iconAnchor: [7, 7],
+        popupAnchor: [0, -10]
     })
 }
 
@@ -948,36 +948,91 @@ function PetaFaslan({ isDashboard = false, showDisaster = true }) {
 
                             return (
                                 <Marker key={`tanah-${asset.id || asset.unique_key}`} position={coords} icon={createDynamicIcon(lanalColor)}>
-                                    <Popup>
-                                        <div style={{ minWidth: '200px' }}>
+                                    <Popup className="custom-popup" minWidth={280}>
+                                        <div style={{ fontFamily: 'Inter, sans-serif' }}>
                                             <div style={{
-                                                fontSize: '14px',
-                                                fontWeight: '700',
-                                                color: '#0ea5e9',
-                                                marginBottom: '8px',
-                                                paddingBottom: '8px',
-                                                borderBottom: '2px solid #0ea5e9'
+                                                fontSize: '11px',
+                                                fontWeight: '800',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '1px',
+                                                color: lanalColor,
+                                                marginBottom: '4px'
                                             }}>
-                                                📍 ASET TANAH
+                                                {asset.lanal || 'LANAL TIDAK TERDATA'}
                                             </div>
-                                            <div style={{ marginBottom: '6px' }}>
-                                                <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: '600' }}>Nama</div>
-                                                <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>
-                                                    {asset.name || asset.nama_satker || '-'}
+                                            <div style={{
+                                                fontSize: '18px',
+                                                fontWeight: '700',
+                                                color: '#1f2937',
+                                                marginBottom: '12px',
+                                                lineHeight: '1.2'
+                                            }}>
+                                                {asset.identifikasi_aset || asset.name || asset.nama_satker || 'Tanpa Identifikasi Aset'}
+                                            </div>
+
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+                                                <div style={{ background: '#f8fafc', padding: '8px', borderRadius: '6px', border: '1px solid #f1f5f9' }}>
+                                                    <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '600' }}>Luas Tanah</div>
+                                                    <div style={{ fontSize: '13px', fontWeight: '700', color: lanalColor }}>
+                                                        {formatLuas(asset.luas_tanah_seluruhnya || asset.luas)} m²
+                                                    </div>
+                                                </div>
+                                                <div style={{ background: '#f8fafc', padding: '8px', borderRadius: '6px', border: '1px solid #f1f5f9' }}>
+                                                    <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '600' }}>Lon / Lat</div>
+                                                    <div style={{ fontSize: '11px', fontWeight: '600', color: '#334155', fontFamily: 'monospace' }}>
+                                                        {asset.longitude ? parseFloat(asset.longitude).toFixed(5) : '-'} /<br /> 
+                                                        {asset.latitude ? parseFloat(asset.latitude).toFixed(5) : '-'}
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div style={{ marginBottom: '6px' }}>
-                                                <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: '600' }}>Kode Barang</div>
-                                                <div style={{ fontSize: '13px', color: '#4b5563' }}>
-                                                    {asset.kode_barang || '-'}
+
+                                            <div style={{ marginBottom: '12px' }}>
+                                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600', marginBottom: '2px' }}>Alamat</div>
+                                                <div style={{ fontSize: '12px', color: '#475569', lineHeight: '1.4' }}>
+                                                    {asset.alamat || '-'}
                                                 </div>
                                             </div>
-                                            <div>
-                                                <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: '600' }}>Luas</div>
-                                                <div style={{ fontSize: '16px', fontWeight: '700', color: '#0ea5e9' }}>
-                                                    {formatLuas(asset.luas_tanah_seluruhnya || asset.luas)} m²
-                                                </div>
-                                            </div>
+
+                                            {(() => {
+                                                let photos = [];
+                                                try {
+                                                    if (asset.photos) {
+                                                        photos = typeof asset.photos === 'string' ? JSON.parse(asset.photos) : asset.photos;
+                                                    }
+                                                } catch(e){}
+                                                if (photos && photos.length > 0) {
+                                                    return (
+                                                        <div>
+                                                            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600', marginBottom: '6px' }}>Foto ({photos.length})</div>
+                                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+                                                                {photos.slice(0, 4).map((p, idx) => (
+                                                                    <img 
+                                                                        key={idx} 
+                                                                        src={p.base64} 
+                                                                        alt={`Foto ${idx+1}`}
+                                                                        onClick={() => {
+                                                                            const w = window.open();
+                                                                            w.document.write(`<body style="margin:0;display:flex;justify-content:center;align-items:center;background:#000;height:100vh;"><img src="${p.base64}" style="max-width:100%;max-height:100%;object-fit:contain;" /></body>`);
+                                                                        }}
+                                                                        style={{ 
+                                                                            width: '100%', 
+                                                                            aspectRatio: '1', 
+                                                                            objectFit: 'cover', 
+                                                                            borderRadius: '4px',
+                                                                            cursor: 'zoom-in',
+                                                                            border: '1px solid #e2e8f0',
+                                                                            transition: 'transform 0.2s',
+                                                                        }}
+                                                                        onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                                                                        onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+                                                                    />
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                }
+                                                return null;
+                                            })()}
                                         </div>
                                     </Popup>
                                 </Marker>
