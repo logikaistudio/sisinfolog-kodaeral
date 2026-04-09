@@ -1005,28 +1005,31 @@ function PetaFaslan({ isDashboard = false, showDisaster = true }) {
                                                         <div>
                                                             <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600', marginBottom: '6px' }}>Foto ({photos.length})</div>
                                                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-                                                                {photos.slice(0, 4).map((p, idx) => (
-                                                                    <img 
-                                                                        key={idx} 
-                                                                        src={p.base64} 
-                                                                        alt={`Foto ${idx+1}`}
-                                                                        onClick={() => {
-                                                                            const w = window.open();
-                                                                            w.document.write(`<body style="margin:0;display:flex;justify-content:center;align-items:center;background:#000;height:100vh;"><img src="${p.base64}" style="max-width:100%;max-height:100%;object-fit:contain;" /></body>`);
-                                                                        }}
-                                                                        style={{ 
-                                                                            width: '100%', 
-                                                                            aspectRatio: '1', 
-                                                                            objectFit: 'cover', 
-                                                                            borderRadius: '4px',
-                                                                            cursor: 'zoom-in',
-                                                                            border: '1px solid #e2e8f0',
-                                                                            transition: 'transform 0.2s',
-                                                                        }}
-                                                                        onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05)'}
-                                                                        onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
-                                                                    />
-                                                                ))}
+                                                                {photos.slice(0, 4).map((p, idx) => {
+                                                                    const srcStr = typeof p === 'string' ? p : p.base64;
+                                                                    return (
+                                                                        <img 
+                                                                            key={idx} 
+                                                                            src={srcStr} 
+                                                                            alt={`Foto ${idx+1}`}
+                                                                            onClick={() => {
+                                                                                const w = window.open();
+                                                                                w.document.write(`<body style="margin:0;display:flex;justify-content:center;align-items:center;background:#000;height:100vh;"><img src="${srcStr}" style="max-width:100%;max-height:100%;object-fit:contain;" /></body>`);
+                                                                            }}
+                                                                            style={{ 
+                                                                                width: '100%', 
+                                                                                aspectRatio: '1', 
+                                                                                objectFit: 'cover', 
+                                                                                borderRadius: '4px',
+                                                                                cursor: 'zoom-in',
+                                                                                border: '1px solid #e2e8f0',
+                                                                                transition: 'transform 0.2s',
+                                                                            }}
+                                                                            onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                                                                            onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+                                                                        />
+                                                                    )
+                                                                })}
                                                             </div>
                                                         </div>
                                                     )

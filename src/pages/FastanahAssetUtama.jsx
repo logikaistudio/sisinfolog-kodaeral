@@ -159,7 +159,7 @@ function FastanahAssetUtama() {
         setIsSaving(true);
         try {
             const rawItem = rawDataMap[currentItem.id] || {};
-            const photosJson = JSON.stringify(photos.map(p => p.base64));
+            const photosJson = JSON.stringify(photos.map(p => typeof p === 'string' ? p : p.base64));
 
             const payload = {
                 ...rawItem,
@@ -512,7 +512,7 @@ function FastanahAssetUtama() {
                                         {photos[idx] ? (
                                             <>
                                                 <img
-                                                    src={photos[idx].base64}
+                                                    src={typeof photos[idx] === 'string' ? photos[idx] : photos[idx].base64}
                                                     alt={`Foto ${idx + 1}`}
                                                     style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                                                 />
@@ -561,7 +561,7 @@ function FastanahAssetUtama() {
                                 ))}
                             </div>
                             <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: 0 }}>
-                                * Format JPEG (.jpg), ukuran maks 400 KB/foto, orientasi portrait (tinggi &gt; lebar), maks 4 foto per aset.
+                                * Format JPEG (.jpg), ukuran maks 400 KB/foto, maks 4 foto per aset.
                             </p>
                         </div>
 
