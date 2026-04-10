@@ -1655,18 +1655,27 @@ function PetaFaslan({ isDashboard = false, showDisaster = true }) {
                     cursor: 'zoom-out',
                     padding: '20px'
                 }} onClick={() => setLightboxSrc(null)}>
-                    <img 
-                        src={lightboxSrc} 
-                        alt="Preview" 
-                        style={{ 
-                            maxWidth: '100%', 
-                            maxHeight: '100%', 
-                            objectFit: 'contain',
-                            borderRadius: '8px',
-                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
-                        }} 
-                        onClick={e => e.stopPropagation()}
-                    />
+                    <div onClick={e => e.stopPropagation()} style={{
+                        position: 'relative',
+                        width: '90vw',
+                        maxWidth: '960px',
+                        aspectRatio: '16/9',
+                        borderRadius: '12px',
+                        overflow: 'hidden',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+                        background: '#000'
+                    }}>
+                        <img 
+                            src={lightboxSrc} 
+                            alt="Preview" 
+                            style={{ 
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                display: 'block'
+                            }} 
+                        />
+                    </div>
                     <button 
                         onClick={() => setLightboxSrc(null)}
                         style={{

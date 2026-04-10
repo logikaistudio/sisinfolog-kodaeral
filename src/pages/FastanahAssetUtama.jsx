@@ -11,6 +11,7 @@ function FastanahAssetUtama() {
     const [editData, setEditData] = useState({ lanal: '', identifikasi_aset: '', longitude: '', latitude: '', alamat: '' });
     const [photos, setPhotos] = useState([]); // [{ base64, name, size }]
     const [isSaving, setIsSaving] = useState(false);
+    const [lightboxSrc, setLightboxSrc] = useState(null); // Lightbox state
 
     const photoInputRef = useRef(null);
 
@@ -563,10 +564,11 @@ function FastanahAssetUtama() {
                                     }}>
                                         {photos[idx] ? (
                                             <>
-                                                <img
+                                <img
                                                     src={typeof photos[idx] === 'string' ? photos[idx] : photos[idx].base64}
                                                     alt={`Foto ${idx + 1}`}
-                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                                                    onClick={() => setLightboxSrc(typeof photos[idx] === 'string' ? photos[idx] : photos[idx].base64)}
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', cursor: 'zoom-in' }}
                                                 />
                                                 {/* Overlay footer */}
                                                 <div style={{
@@ -642,6 +644,43 @@ function FastanahAssetUtama() {
                             </button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* Lightbox Landscape 16:9 */}
+            {lightboxSrc && (
+                <div
+                    style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'rgba(10,15,30,0.92)',
+                        backdropFilter: 'blur(6px)',
+                        zIndex: 99999,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'zoom-out', padding: '24px'
+                    }}
+                    onClick={() => setLightboxSrc(null)}
+                >
+                    <div onClick={e => e.stopPropagation()} style={{
+                        position: 'relative', width: '90vw', maxWidth: '960px',
+                        aspectRatio: '16/9', borderRadius: '14px', overflow: 'hidden',
+                        boxShadow: '0 30px 60px rgba(0,0,0,0.7)', background: '#000'
+                    }}>
+                        <img
+                            src={lightboxSrc}
+                            alt="Preview Foto"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                        />
+                    </div>
+                    <button
+                        onClick={() => setLightboxSrc(null)}
+                        style={{
+                            position: 'absolute', top: '20px', right: '20px',
+                            background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)',
+                            color: 'white', width: '40px', height: '40px', borderRadius: '50%',
+                            fontSize: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer'
+                        }}
+                    >×</button>
                 </div>
             )}
         </div>
