@@ -159,7 +159,7 @@ function FastanahAssetUtama() {
                         sy = (height - sHeight) / 2;
                     }
                     
-                    const MAX_DIM = 800; // Limit resolusi maks
+                    const MAX_DIM = 640; // Limit resolusi maks agar size ringan
                     let newWidth, newHeight;
                     if (width >= height) {
                         newWidth = Math.min(MAX_DIM, sWidth);
@@ -175,7 +175,7 @@ function FastanahAssetUtama() {
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, newWidth, newHeight);
                     
-                    resolve(canvas.toDataURL('image/jpeg', 0.8));
+                    resolve(canvas.toDataURL('image/jpeg', 0.6));
                 };
                 img.src = ev.target.result;
             };
@@ -183,8 +183,8 @@ function FastanahAssetUtama() {
         });
 
         const roughSize = Math.round((base64.length * 3) / 4);
-        if (roughSize > 1024 * 1024) {
-             alert(`Ukuran foto masih terlalu besar setelah dikompresi. Mohon gunakan foto lain.`);
+        if (roughSize > 250 * 1024) {
+             alert(`Ukuran foto masih terlalu besar (${Math.round(roughSize/1024)}KB) setelah dikompresi. Maksimal ukuran penyimpanan sekitar 200KB. Mohon gunakan foto dengan resolusi lebih kecil.`);
              return;
         }
 
