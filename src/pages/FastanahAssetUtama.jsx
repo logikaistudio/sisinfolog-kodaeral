@@ -146,28 +146,25 @@ function FastanahAssetUtama() {
                     let width = img.width;
                     let height = img.height;
                     
-                    const targetRatio = 16 / 9; // Fix rasio ke 16:9 sesuai permintaan (Landscape)
+                    // Force landscape 16:9 crop
+                    const targetRatio = 16 / 9;
                     
                     let sx = 0, sy = 0, sWidth = width, sHeight = height;
                     const currentRatio = width / height;
                     
                     if (currentRatio > targetRatio) {
+                        // Image is wider than 16:9 → crop sides
                         sWidth = height * targetRatio;
                         sx = (width - sWidth) / 2;
                     } else {
+                        // Image is taller than 16:9 (portrait) → crop top/bottom
                         sHeight = width / targetRatio;
                         sy = (height - sHeight) / 2;
                     }
                     
-                    const MAX_DIM = 640; // Limit resolusi maks agar size ringan
-                    let newWidth, newHeight;
-                    if (width >= height) {
-                        newWidth = Math.min(MAX_DIM, sWidth);
-                        newHeight = newWidth / targetRatio;
-                    } else {
-                        newHeight = Math.min(MAX_DIM, sHeight);
-                        newWidth = newHeight * targetRatio;
-                    }
+                    // Output canvas fixed at 640x360 (16:9 landscape)
+                    const newWidth = 640;
+                    const newHeight = 360;
                     
                     const canvas = document.createElement('canvas');
                     canvas.width = newWidth;
@@ -175,18 +172,24 @@ function FastanahAssetUtama() {
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, newWidth, newHeight);
                     
-                    resolve(canvas.toDataURL('image/jpeg', 0.6));
+                    // Iterative compression: reduce quality until under 200KB
+                    const MAX_BYTES = 200 * 1024;
+                    let quality = 0.82;
+                    let dataUrl = canvas.toDataURL('image/jpeg', quality);
+                    
+                    while (dataUrl.length * 0.75 > MAX_BYTES && quality > 0.1) {
+                        quality = Math.max(0.1, quality - 0.12);
+                        dataUrl = canvas.toDataURL('image/jpeg', quality);
+                    }
+                    
+                    resolve(dataUrl);
                 };
                 img.src = ev.target.result;
             };
             reader.readAsDataURL(file);
         });
 
-        const roughSize = Math.round((base64.length * 3) / 4);
-        if (roughSize > 250 * 1024) {
-             alert(`Ukuran foto masih terlalu besar (${Math.round(roughSize/1024)}KB) setelah dikompresi. Maksimal ukuran penyimpanan sekitar 200KB. Mohon gunakan foto dengan resolusi lebih kecil.`);
-             return;
-        }
+        const roughSize = Math.round(base64.length * 0.75);
 
         setPhotos(prev => [...prev, {
             base64: base64,
