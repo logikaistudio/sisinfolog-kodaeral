@@ -115,7 +115,7 @@ function FastanahAssetUtama() {
             identifikasi_aset: item.identifikasi_aset || '',
             longitude: item.longitude || '',
             latitude: item.latitude || '',
-            alamat: item.alamat || '',
+            alamat: item.alamat || item.alamat_lengkap || '',
         });
         setPhotos(item.photos || []);
         setIsEditorOpen(true);
@@ -489,7 +489,7 @@ function FastanahAssetUtama() {
                                 <div style={{ gridColumn: 'span 2' }}>
                                     <label style={edLabelStyle}>Alamat Lengkap</label>
                                     <textarea
-                                        value={editData.alamat || currentItem.alamat_lengkap}
+                                        value={editData.alamat}
                                         onChange={e => setEditData(p => ({ ...p, alamat: e.target.value }))}
                                         style={{ ...edInputStyle, minHeight: '52px', resize: 'vertical' }}
                                     />
