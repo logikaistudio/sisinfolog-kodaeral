@@ -8,7 +8,7 @@ function FastanahAssetUtama() {
     // Editor State
     const [isEditorOpen, setIsEditorOpen] = useState(false);
     const [currentItem, setCurrentItem] = useState(null);
-    const [editData, setEditData] = useState({ lanal: '', longitude: '', latitude: '' });
+    const [editData, setEditData] = useState({ lanal: '', identifikasi_aset: '', longitude: '', latitude: '', alamat: '' });
     const [photos, setPhotos] = useState([]); // [{ base64, name, size }]
     const [isSaving, setIsSaving] = useState(false);
 
@@ -84,6 +84,7 @@ function FastanahAssetUtama() {
                             identifikasi_aset: item.identifikasi_aset || '',
                             longitude: item.longitude || '',
                             latitude: item.latitude || '',
+                            alamat: item.alamat || '',
                             photos: savedPhotos,
                         };
                     });
@@ -114,13 +115,14 @@ function FastanahAssetUtama() {
             identifikasi_aset: item.identifikasi_aset || '',
             longitude: item.longitude || '',
             latitude: item.latitude || '',
+            alamat: item.alamat || '',
         });
         setPhotos(item.photos || []);
         setIsEditorOpen(true);
     };
 
     // --- Photo Upload Handlers ---
-    const handlePhotoUpload = (e) => {
+    const handlePhotoUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
         e.target.value = null; // reset so same file can be re-selected
@@ -129,24 +131,70 @@ function FastanahAssetUtama() {
             alert('Maksimal 4 foto yang dapat diunggah.');
             return;
         }
-        if (file.type !== 'image/jpeg') {
-            alert('Hanya foto format JPEG (.jpg) yang diperbolehkan.');
-            return;
-        }
-        if (file.size > 400 * 1024) {
-            alert(`Ukuran foto maksimal 400KB.\nFoto ini berukuran ${(file.size / 1024).toFixed(0)} KB.`);
+        
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+        if (!allowedTypes.includes(file.type)) {
+            alert('Hanya format JPG/JPEG dan PNG yang diperbolehkan.');
             return;
         }
 
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-            setPhotos(prev => [...prev, {
-                base64: ev.target.result,
-                name: file.name,
-                size: file.size,
-            }]);
-        };
-        reader.readAsDataURL(file);
+        const base64 = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const img = new Image();
+                img.onload = () => {
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    let targetRatio;
+                    if (width >= height) targetRatio = 16 / 9;  // Landscape
+                    else targetRatio = 9 / 16;  // Portrait
+                    
+                    let sx = 0, sy = 0, sWidth = width, sHeight = height;
+                    const currentRatio = width / height;
+                    
+                    if (currentRatio > targetRatio) {
+                        sWidth = height * targetRatio;
+                        sx = (width - sWidth) / 2;
+                    } else {
+                        sHeight = width / targetRatio;
+                        sy = (height - sHeight) / 2;
+                    }
+                    
+                    const MAX_DIM = 800; // Limit resolusi maks
+                    let newWidth, newHeight;
+                    if (width >= height) {
+                        newWidth = Math.min(MAX_DIM, sWidth);
+                        newHeight = newWidth / targetRatio;
+                    } else {
+                        newHeight = Math.min(MAX_DIM, sHeight);
+                        newWidth = newHeight * targetRatio;
+                    }
+                    
+                    const canvas = document.createElement('canvas');
+                    canvas.width = newWidth;
+                    canvas.height = newHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, newWidth, newHeight);
+                    
+                    resolve(canvas.toDataURL(file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.85));
+                };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        const roughSize = Math.round((base64.length * 3) / 4);
+        if (roughSize > 1024 * 1024) {
+             alert(`Ukuran foto masih terlalu besar setelah dikompresi. Mohon gunakan foto lain.`);
+             return;
+        }
+
+        setPhotos(prev => [...prev, {
+            base64: base64,
+            name: file.name,
+            size: roughSize,
+        }]);
     };
 
     const removePhoto = (idx) => {
@@ -167,6 +215,7 @@ function FastanahAssetUtama() {
                 identifikasi_aset: editData.identifikasi_aset,
                 longitude: editData.longitude,
                 latitude: editData.latitude,
+                alamat: editData.alamat,
                 photos: photosJson,
             };
 
@@ -182,7 +231,7 @@ function FastanahAssetUtama() {
                 setRawDataMap(prev => ({ ...prev, [currentItem.id]: updated }));
                 // Sync assets list
                 setAssets(prev => prev.map(a => a.id === currentItem.id
-                    ? { ...a, lanal: editData.lanal, identifikasi_aset: editData.identifikasi_aset, longitude: editData.longitude, latitude: editData.latitude, photos: [...photos] }
+                    ? { ...a, lanal: editData.lanal, identifikasi_aset: editData.identifikasi_aset, longitude: editData.longitude, latitude: editData.latitude, alamat: editData.alamat, photos: [...photos] }
                     : a
                 ));
                 alert('✅ Data berhasil disimpan!');
@@ -202,7 +251,7 @@ function FastanahAssetUtama() {
         setIsEditorOpen(false);
         setTimeout(() => {
             setCurrentItem(null);
-            setEditData({ lanal: '', identifikasi_aset: '', longitude: '', latitude: '' });
+            setEditData({ lanal: '', identifikasi_aset: '', longitude: '', latitude: '', alamat: '' });
             setPhotos([]);
         }, 200);
     };
@@ -235,11 +284,10 @@ function FastanahAssetUtama() {
     return (
         <div className="fade-in" style={{ fontFamily: FONT_SYSTEM, minHeight: '100%', display: 'flex', flexDirection: 'column', background: '#f8fafc', padding: '20px 30px' }}>
 
-            {/* Hidden photo picker */}
             <input
                 ref={photoInputRef}
                 type="file"
-                accept="image/jpeg"
+                accept="image/jpeg, image/png"
                 style={{ display: 'none' }}
                 onChange={handlePhotoUpload}
             />
@@ -489,13 +537,21 @@ function FastanahAssetUtama() {
                                         style={{ ...edInputStyle, fontFamily: FONT_MONO }}
                                     />
                                 </div>
+                                <div style={{ gridColumn: 'span 2' }}>
+                                    <label style={edLabelStyle}>Alamat (Edit Area)</label>
+                                    <textarea
+                                        value={editData.alamat}
+                                        onChange={e => setEditData(p => ({ ...p, alamat: e.target.value }))}
+                                        placeholder="Contoh: Jl. RE Martadinata No.1"
+                                        style={{ ...edInputStyle, minHeight: '52px', resize: 'vertical' }}
+                                    />
+                                </div>
                             </div>
 
-                            {/* ── Section: Upload Foto ── */}
                             <div style={{ ...sectionHeaderStyle, justifyContent: 'space-between' }}>
                                 <span>📷 Foto Aset</span>
                                 <span style={{ fontWeight: '400', fontSize: '0.72rem', color: '#94a3b8', textTransform: 'none', letterSpacing: 0 }}>
-                                    JPEG · Maks 400 KB · Portrait · Maks 4 Foto ({photos.length}/4)
+                                    JPG/PNG · Auto Crop (16:9/9:16) · Maks 4 Foto ({photos.length}/4)
                                 </span>
                             </div>
 
