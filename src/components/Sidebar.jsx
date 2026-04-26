@@ -170,8 +170,8 @@ function Sidebar({ currentPage, setCurrentPage, collapsed, setCollapsed, mobileO
         // Function to filter menu recursively
         const filterMenu = (items) => {
             return items.filter(item => {
-                // If user is super admin (has 'all'), show everything
-                if (user?.permissions?.includes('all')) return true;
+                // If user is super admin (has 'all' permission or 'Super Admin' role name), show everything
+                if (user?.permissions?.includes('all') || user?.role === 'Super Admin') return true;
 
                 // Check if user has required permission
                 const hasPerm = !item.requiredPermission || user?.permissions?.includes(item.requiredPermission);
