@@ -42,8 +42,12 @@ function App() {
     if (storedUser) {
       try {
         const userData = JSON.parse(storedUser)
-        setIsAuthenticated(true)
-        setUser(userData)
+        if (userData && typeof userData === 'object' && !Array.isArray(userData) && userData.name) {
+          setIsAuthenticated(true)
+          setUser(userData)
+        } else {
+          localStorage.removeItem('currentUser')
+        }
       } catch (error) {
         console.error('Error parsing stored user:', error)
         localStorage.removeItem('currentUser')
@@ -52,22 +56,13 @@ function App() {
   }, [])
 
   const handleLogin = (userData) => {
+    if (!userData || typeof userData !== 'object') {
+      console.error('Invalid user data received on login');
+      return;
+    }
     setIsAuthenticated(true)
     setUser(userData)
-    // currentUser already saved by Login.jsx, but we can ensure it here
-    if (typeof userData === 'string') {
-      // Old format - just username
-      const mockUser = {
-        name: userData,
-        role: 'Super Admin',
-        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(userData)}&background=0ea5e9&color=fff`
-      }
-      setUser(mockUser)
-      localStorage.setItem('currentUser', JSON.stringify(mockUser))
-    } else {
-      // New format - full user object from API
-      localStorage.setItem('currentUser', JSON.stringify(userData))
-    }
+    localStorage.setItem('currentUser', JSON.stringify(userData))
     // Reset to default page on login
     setCurrentPage('dashboard-pimpinan')
   }
