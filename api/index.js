@@ -1710,7 +1710,7 @@ app.post('/api/auth/login', async (req, res) => {
         const result = await pool.query(`
             SELECT u.*, r.permissions 
             FROM users u
-            LEFT JOIN roles r ON u.role = r.name
+            LEFT JOIN roles r ON LOWER(u.role) = LOWER(r.name)
             WHERE u.username = $1
         `, [username]);
         const user = result.rows[0];
