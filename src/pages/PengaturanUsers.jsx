@@ -2,15 +2,25 @@ import { useState, useEffect } from 'react'
 
 const AVAILABLE_PERMISSIONS = [
     { id: 'all', label: 'All Access (Super Admin)' },
-    { id: 'manage_users', label: 'Manage Users' },
-    { id: 'manage_content', label: 'Manage Content' },
-    { id: 'read_content', label: 'Read Content' },
-    { id: 'manage_roles', label: 'Manage Roles' }
+    { id: 'dashboard_view', label: 'View Dashboard' },
+    { id: 'faslan_view', label: 'View Fasilitas Pangkalan' },
+    { id: 'faslan_edit', label: 'Edit Fasilitas Pangkalan' },
+    { id: 'faslabuh_view', label: 'View Faslabuh' },
+    { id: 'faslabuh_edit', label: 'Edit Faslabuh' },
+    { id: 'kerjasama_view', label: 'View Kerjasama/Pemanfaatan' },
+    { id: 'fasharpan_view', label: 'View Fasharpan/Injasmar' },
+    { id: 'satharkan_view', label: 'View Satharkan/Data Harkan' },
+    { id: 'diskes_view', label: 'View Fasilitas Kesehatan' },
+    { id: 'disbek_view', label: 'View Fasilitas Pembekalan' },
+    { id: 'disang_view', label: 'View Fasilitas Angkutan' },
+    { id: 'master_data_manage', label: 'Manage Master Data' },
+    { id: 'users_manage', label: 'Manage Users' },
+    { id: 'roles_manage', label: 'Manage Roles' }
 ];
 
-function PengaturanUsers() {
+function PengaturanUsers({ defaultTab = 'users' }) {
     // Tabs state
-    const [activeTab, setActiveTab] = useState('users'); // 'users' or 'roles'
+    const [activeTab, setActiveTab] = useState(defaultTab); // 'users' or 'roles'
 
     // Users state
     const [users, setUsers] = useState([])

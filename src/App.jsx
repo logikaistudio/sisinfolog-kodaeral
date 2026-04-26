@@ -22,7 +22,6 @@ import MasterRumneg from './pages/MasterRumneg'
 import RumnegArea from './pages/RumnegArea'
 import AssetDetail from './pages/AssetDetail'
 import PengaturanUsers from './pages/PengaturanUsers'
-import PengaturanRoles from './pages/PengaturanRoles'
 import './index.css'
 
 
@@ -128,9 +127,9 @@ function App() {
           onBack={() => setCurrentPage('master-asset')}
         />
       case 'pengaturan-users':
-        return <PengaturanUsers />
+        return <PengaturanUsers defaultTab="users" />
       case 'pengaturan-roles':
-        return <PengaturanRoles />
+        return <PengaturanUsers defaultTab="roles" />
       default:
         if (currentPage.startsWith('faslan-rumneg:dynamic:')) {
           const areaName = currentPage.replace('faslan-rumneg:dynamic:', '');

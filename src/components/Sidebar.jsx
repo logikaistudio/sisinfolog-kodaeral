@@ -54,105 +54,145 @@ function Sidebar({ currentPage, setCurrentPage, collapsed, setCollapsed, mobileO
         };
     }, []);
 
-    const menuItems = useMemo(() => [
-        {
-            id: 'dashboard-pimpinan',
-            label: 'Dashboard Pimpinan',
-            icon: '📊',
-            description: 'Ringkasan Eksekutif'
-        },
-        {
-            id: 'faslan',
-            label: 'Fasilitas Pangkalan',
-            icon: '🏛️',
-            description: 'Fasilitas Pangkalan',
-            children: [
-                { id: 'faslan-peta', label: 'Peta Faslan', icon: '🗺️' },
-                {
-                    id: 'fastanah-parent',
-                    label: 'Fastanah',
-                    icon: '📍',
-                    children: [
-                        { id: 'faslan-tanah-utama', label: 'Aset Tanah Utama', icon: '📍' },
-                        { id: 'faslan-kapling', label: 'Aset Kapling', icon: '🏕️' },
-                        {
-                            id: 'faslan-rumneg-parent',
-                            label: 'Aset Rumah Negara',
-                            icon: '🏠',
-                            children: rumnegAreas.length > 0
-                                ? rumnegAreas.map(area => ({
-                                    id: `faslan-rumneg:dynamic:${area.name}`,
-                                    label: `${area.name} (${area.count})`,
-                                    icon: '🏘️'
-                                }))
-                                : [
-                                    { id: 'faslan-rumneg:dynamic:Lagoa', label: 'Lagoa (0)', icon: '🏘️' }
-                                ]
-                        },
-                        { id: 'faslan-kerjasama', label: 'Pemanfaatan Aset', icon: '🤝' }
-                    ]
-                },
-                { id: 'faslan-faslabuh', label: 'Faslabuh', icon: '⚓' }
-            ]
-        },
-        {
-            id: 'fasharpan',
-            label: 'Fasilitas Pemeliharaan & Perbaikan',
-            icon: '🛠️',
-            description: 'Fasharpan',
-            children: [
-                { id: 'fasharpan-injasmar', label: 'Industri Jasa Maritim', icon: '🚢' }
-            ]
-        },
-        {
-            id: 'satharkan',
-            label: 'Satharkan',
-            icon: '🏗️',
-            description: 'Satuan Pemeliharaan Pangkalan',
-            children: [
-                { id: 'data-harkan', label: 'Data Harkan', icon: '📝' }
-            ]
-        },
-        {
-            id: 'diskes',
-            label: 'Fasilitas Kesehatan',
-            icon: '🏥',
-            description: 'DisKes'
-        },
-        {
-            id: 'disbek',
-            label: 'Fasilitas Pembekalan',
-            icon: '📦',
-            description: 'DisBek'
-        },
-        {
-            id: 'disang',
-            label: 'Fasilitas Jasa Angkutan',
-            icon: '🚛',
-            description: 'DisAng'
-        },
-        {
-            id: 'masterdata',
-            label: 'Master Data',
-            icon: '⚙️',
-            description: 'Data Master',
-            children: [
-                { id: 'master-asset', label: 'Master Aset', icon: '📦' },
-                { id: 'master-asset-utama', label: 'Master Aset Utama', icon: '📦' },
-                { id: 'master-rumneg', label: 'Aset Rumneg', icon: '🏠' }
-            ]
-        },
-        {
-            id: 'pengaturan',
-            label: 'Pengaturan',
-            icon: '🔧',
-            description: 'Pengaturan Sistem',
-            children: [
-                { id: 'pengaturan-users', label: 'Akses Masuk', icon: '👥' },
-                { id: 'pengaturan-roles', label: 'Role Management', icon: '🛡️' }
-            ]
-        }
-    ], [rumnegAreas])
+    const menuItems = useMemo(() => {
+        const allItems = [
+            {
+                id: 'dashboard-pimpinan',
+                label: 'Dashboard Pimpinan',
+                icon: '📊',
+                description: 'Ringkasan Eksekutif',
+                requiredPermission: 'dashboard_view'
+            },
+            {
+                id: 'faslan',
+                label: 'Fasilitas Pangkalan',
+                icon: '🏛️',
+                description: 'Fasilitas Pangkalan',
+                requiredPermission: 'faslan_view',
+                children: [
+                    { id: 'faslan-peta', label: 'Peta Faslan', icon: '🗺️', requiredPermission: 'faslan_view' },
+                    {
+                        id: 'fastanah-parent',
+                        label: 'Fastanah',
+                        icon: '📍',
+                        requiredPermission: 'faslan_view',
+                        children: [
+                            { id: 'faslan-tanah-utama', label: 'Aset Tanah Utama', icon: '📍', requiredPermission: 'faslan_view' },
+                            { id: 'faslan-kapling', label: 'Aset Kapling', icon: '🏕️', requiredPermission: 'faslan_view' },
+                            {
+                                id: 'faslan-rumneg-parent',
+                                label: 'Aset Rumah Negara',
+                                icon: '🏠',
+                                requiredPermission: 'faslan_view',
+                                children: rumnegAreas.length > 0
+                                    ? rumnegAreas.map(area => ({
+                                        id: `faslan-rumneg:dynamic:${area.name}`,
+                                        label: `${area.name} (${area.count})`,
+                                        icon: '🏘️',
+                                        requiredPermission: 'faslan_view'
+                                    }))
+                                    : [
+                                        { id: 'faslan-rumneg:dynamic:Lagoa', label: 'Lagoa (0)', icon: '🏘️', requiredPermission: 'faslan_view' }
+                                    ]
+                            },
+                            { id: 'faslan-kerjasama', label: 'Pemanfaatan Aset', icon: '🤝', requiredPermission: 'kerjasama_view' }
+                        ]
+                    },
+                    { id: 'faslan-faslabuh', label: 'Faslabuh', icon: '⚓', requiredPermission: 'faslabuh_view' }
+                ]
+            },
+            {
+                id: 'fasharpan',
+                label: 'Fasilitas Pemeliharaan & Perbaikan',
+                icon: '🛠️',
+                description: 'Fasharpan',
+                requiredPermission: 'fasharpan_view',
+                children: [
+                    { id: 'fasharpan-injasmar', label: 'Industri Jasa Maritim', icon: '🚢', requiredPermission: 'fasharpan_view' }
+                ]
+            },
+            {
+                id: 'satharkan',
+                label: 'Satharkan',
+                icon: '🏗️',
+                description: 'Satuan Pemeliharaan Pangkalan',
+                requiredPermission: 'satharkan_view',
+                children: [
+                    { id: 'data-harkan', label: 'Data Harkan', icon: '📝', requiredPermission: 'satharkan_view' }
+                ]
+            },
+            {
+                id: 'diskes',
+                label: 'Fasilitas Kesehatan',
+                icon: '🏥',
+                description: 'DisKes',
+                requiredPermission: 'diskes_view'
+            },
+            {
+                id: 'disbek',
+                label: 'Fasilitas Pembekalan',
+                icon: '📦',
+                description: 'DisBek',
+                requiredPermission: 'disbek_view'
+            },
+            {
+                id: 'disang',
+                label: 'Fasilitas Jasa Angkutan',
+                icon: '🚛',
+                description: 'DisAng',
+                requiredPermission: 'disang_view'
+            },
+            {
+                id: 'masterdata',
+                label: 'Master Data',
+                icon: '⚙️',
+                description: 'Data Master',
+                requiredPermission: 'master_data_manage',
+                children: [
+                    { id: 'master-asset', label: 'Master Aset', icon: '📦', requiredPermission: 'master_data_manage' },
+                    { id: 'master-asset-utama', label: 'Master Aset Utama', icon: '📦', requiredPermission: 'master_data_manage' },
+                    { id: 'master-rumneg', label: 'Aset Rumneg', icon: '🏠', requiredPermission: 'master_data_manage' }
+                ]
+            },
+            {
+                id: 'pengaturan',
+                label: 'Pengaturan',
+                icon: '🔧',
+                description: 'Pengaturan Sistem',
+                requiredPermission: 'users_manage',
+                children: [
+                    { id: 'pengaturan-users', label: 'Akses Masuk', icon: '👥', requiredPermission: 'users_manage' },
+                    { id: 'pengaturan-roles', label: 'Role Management', icon: '🛡️', requiredPermission: 'roles_manage' }
+                ]
+            }
+        ];
+
+        // Function to filter menu recursively
+        const filterMenu = (items) => {
+            return items.filter(item => {
+                // If user is super admin (has 'all'), show everything
+                if (user?.permissions?.includes('all')) return true;
+
+                // Check if user has required permission
+                const hasPerm = !item.requiredPermission || user?.permissions?.includes(item.requiredPermission);
+
+                if (hasPerm) {
+                    // If has children, filter them too
+                    if (item.children) {
+                        item.children = filterMenu(item.children);
+                        // If no children left and it's a parent menu, maybe hide it? 
+                        // But some items might be clickable even without children.
+                        // For this app, parents like 'faslan' usually have children.
+                        return item.children.length > 0 || !item.children;
+                    }
+                    return true;
+                }
+                return false;
+            });
+        };
+
+        return filterMenu(JSON.parse(JSON.stringify(allItems)));
+    }, [rumnegAreas, user])
 
     const handleMenuClick = (item, hasChildren) => {
         if (hasChildren) {

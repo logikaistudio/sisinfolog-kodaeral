@@ -1706,8 +1706,13 @@ app.post('/api/auth/login', async (req, res) => {
     try {
         await ensureUsersTable();
 
-        // Verify User
-        const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+        // Verify User and fetch permissions
+        const result = await pool.query(`
+            SELECT u.*, r.permissions 
+            FROM users u
+            LEFT JOIN roles r ON u.role = r.name
+            WHERE u.username = $1
+        `, [username]);
         const user = result.rows[0];
 
         if (!user) {
