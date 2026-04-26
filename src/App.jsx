@@ -68,6 +68,8 @@ function App() {
       // New format - full user object from API
       localStorage.setItem('currentUser', JSON.stringify(userData))
     }
+    // Reset to default page on login
+    setCurrentPage('dashboard-pimpinan')
   }
 
   const handleLogout = () => {
