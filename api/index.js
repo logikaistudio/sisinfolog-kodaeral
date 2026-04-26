@@ -1605,7 +1605,7 @@ async function ensureRolesTable() {
 app.get('/api/users', async (req, res) => {
     try {
         await ensureUsersTable();
-        const result = await pool.query('SELECT id, name, email, role, status, avatar, username FROM users ORDER BY id ASC');
+        const result = await pool.query('SELECT id, name, email, role, status, avatar, username, password FROM users ORDER BY id ASC');
         res.json(result.rows);
     } catch (err) {
         console.error('GET /api/users error:', err);
