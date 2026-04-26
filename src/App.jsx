@@ -60,18 +60,21 @@ function App() {
       console.error('Invalid user data received on login');
       return;
     }
+    // Spread to ensure a NEW object reference, forcing React to re-render Sidebar
+    const freshUser = { ...userData }
+    localStorage.setItem('currentUser', JSON.stringify(freshUser))
+    setUser(freshUser)
     setIsAuthenticated(true)
-    setUser(userData)
-    localStorage.setItem('currentUser', JSON.stringify(userData))
     // Reset to default page on login
     setCurrentPage('dashboard-pimpinan')
   }
 
   const handleLogout = () => {
+    // Clear ALL localStorage to prevent any stale session data
+    localStorage.clear()
     setIsAuthenticated(false)
     setUser(null)
-    localStorage.removeItem('currentUser')
-    localStorage.removeItem('isLoggedIn') // Clean up old key too
+    setCurrentPage('dashboard-pimpinan')
   }
 
   // If not authenticated, show Login page

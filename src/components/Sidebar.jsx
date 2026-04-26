@@ -167,32 +167,49 @@ function Sidebar({ currentPage, setCurrentPage, collapsed, setCollapsed, mobileO
             }
         ];
 
-        // Function to filter menu recursively
+        // Normalize permissions: ensure it's always a proper array
+        // (localStorage can serialize/deserialize to string in some edge cases)
+        const userPermissions = Array.isArray(user?.permissions)
+            ? user.permissions
+            : (typeof user?.permissions === 'string'
+                ? JSON.parse(user.permissions)
+                : []);
+
+        const isSuperAdmin = userPermissions.includes('all') || user?.role === 'Super Admin';
+
+        // Function to check if user has a specific permission
+        const hasPerm = (requiredPermission) => {
+            if (isSuperAdmin) return true;
+            if (!requiredPermission) return true;
+            return userPermissions.includes(requiredPermission);
+        };
+
+        // Recursive filter function
         const filterMenu = (items) => {
-            return items.filter(item => {
-                // If user is super admin (has 'all' permission or 'Super Admin' role name), show everything
-                if (user?.permissions?.includes('all') || user?.role === 'Super Admin') return true;
+            const result = [];
+            for (const rawItem of items) {
+                // Clone to avoid mutating original
+                const item = { ...rawItem };
 
-                // Check if user has required permission
-                const hasPerm = !item.requiredPermission || user?.permissions?.includes(item.requiredPermission);
+                // Check parent permission
+                if (!hasPerm(item.requiredPermission)) continue;
 
-                if (hasPerm) {
-                    // If has children, filter them too
-                    if (item.children) {
-                        item.children = filterMenu(item.children);
-                        // If no children left and it's a parent menu, maybe hide it? 
-                        // But some items might be clickable even without children.
-                        // For this app, parents like 'faslan' usually have children.
-                        return item.children.length > 0 || !item.children;
-                    }
-                    return true;
+                // If item has children, filter them recursively
+                if (item.children && item.children.length > 0) {
+                    const filteredChildren = filterMenu(item.children);
+                    // Only show parent if it has at least one accessible child
+                    if (filteredChildren.length === 0) continue;
+                    item.children = filteredChildren;
                 }
-                return false;
-            });
+
+                result.push(item);
+            }
+            return result;
         };
 
         return filterMenu(JSON.parse(JSON.stringify(allItems)));
-    }, [rumnegAreas, user])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [rumnegAreas, JSON.stringify(user)])
 
     const handleMenuClick = (item, hasChildren) => {
         if (hasChildren) {
