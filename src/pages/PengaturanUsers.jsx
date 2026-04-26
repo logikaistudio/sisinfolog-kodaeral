@@ -44,6 +44,7 @@ function PengaturanUsers({ defaultTab = 'users' }) {
     
     // Password visibility state
     const [showPasswords, setShowPasswords] = useState({})
+    const [showModalPassword, setShowModalPassword] = useState(false) // Toggle for modal
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}')
     const isSuperAdmin = currentUser.role === 'Super Admin' || (currentUser.permissions || []).includes('all')
 
@@ -99,7 +100,7 @@ function PengaturanUsers({ defaultTab = 'users' }) {
                 username: user.username || '',
                 role: user.role || 'User',
                 status: user.status || 'Active',
-                password: '' // Don't fill password on edit
+                password: isSuperAdmin ? (user.password || '') : '' // Fill password for Super Admin
             });
         } else {
             setEditingUser(null);
@@ -113,6 +114,7 @@ function PengaturanUsers({ defaultTab = 'users' }) {
     const closeUserModal = () => {
         setShowUserModal(false);
         setEditingUser(null);
+        setShowModalPassword(false); // Reset toggle
         setUserFormData({ name: '', email: '', username: '', role: 'User', status: 'Active', password: '' });
     }
 
@@ -530,10 +532,39 @@ function PengaturanUsers({ defaultTab = 'users' }) {
                         </div>
                         <div className="form-group">
                             <label className="form-label">Password {editingUser && '(Kosongkan jika tidak ingin mengubah)'}</label>
-                            <input
-                                type="password" name="password" className="form-input"
-                                value={userFormData.password} onChange={handleUserFormChange}
-                            />
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    type={showModalPassword ? "text" : "password"} 
+                                    name="password" 
+                                    className="form-input"
+                                    value={userFormData.password} 
+                                    onChange={handleUserFormChange}
+                                    style={{ paddingRight: '40px' }}
+                                />
+                                <button 
+                                    type="button"
+                                    onClick={() => setShowModalPassword(!showModalPassword)}
+                                    style={{
+                                        position: 'absolute',
+                                        right: '10px',
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        background: 'none',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        color: '#64748b',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        padding: 0
+                                    }}
+                                >
+                                    {showModalPassword ? (
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                    ) : (
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                         <div style={{ display: 'flex', gap: '15px' }}>
                             <div className="form-group" style={{ flex: 1 }}>
