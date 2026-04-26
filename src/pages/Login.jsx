@@ -123,6 +123,10 @@ function Login({ onLogin }) {
 
                 <form onSubmit={handleSubmit} autoComplete="off" style={{ width: '100%' }}>
                     <div style={{ marginBottom: '20px' }}>
+                        {/* Dummy inputs to defeat browser autofill */}
+                        <input type="text" name="dummy-username" style={{ display: 'none' }} aria-hidden="true" />
+                        <input type="password" name="dummy-password" style={{ display: 'none' }} aria-hidden="true" />
+                        
                         <label style={{
                             display: 'block',
                             fontSize: '12px',
@@ -140,8 +144,8 @@ function Login({ onLogin }) {
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             placeholder="Masukkan username"
-                            autoComplete="off"
-                            name="nexis-user"
+                            autoComplete="new-password"
+                            name="nexis-auth-user"
                             style={{
                                 width: '100%',
                                 padding: '14px 16px',
@@ -184,7 +188,7 @@ function Login({ onLogin }) {
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="Masukkan password"
                             autoComplete="new-password"
-                            name="nexis-pass"
+                            name="nexis-auth-pass"
                             style={{
                                 width: '100%',
                                 padding: '14px 16px',

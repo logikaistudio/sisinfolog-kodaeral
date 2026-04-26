@@ -72,9 +72,10 @@ function App() {
   const handleLogout = () => {
     // Clear ALL localStorage to prevent any stale session data
     localStorage.clear()
-    setIsAuthenticated(false)
-    setUser(null)
-    setCurrentPage('dashboard-pimpinan')
+    
+    // Force a full page reload to completely reset application state 
+    // and prevent browser autofill from immediately reapplying credentials
+    window.location.href = '/';
   }
 
   // If not authenticated, show Login page
