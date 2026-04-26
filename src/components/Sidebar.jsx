@@ -69,6 +69,9 @@ function Sidebar({ currentPage, setCurrentPage, collapsed, setCollapsed, mobileO
     const userPermissions = getUserPermissions();
     const isSuperAdmin = userPermissions.includes('all') || user?.role === 'Super Admin';
 
+    // DEBUG: log user permissions to browser console
+    console.log('[Sidebar DEBUG] user:', user?.username, '| role:', user?.role, '| permissions:', userPermissions, '| isSuperAdmin:', isSuperAdmin);
+
     const hasPermission = (requiredPermission) => {
         if (isSuperAdmin) return true;
         if (!requiredPermission) return true;
@@ -213,6 +216,9 @@ function Sidebar({ currentPage, setCurrentPage, collapsed, setCollapsed, mobileO
 
     // Compute filtered menu items on every render (no useMemo - ensures fresh data)
     const menuItems = filterMenu(buildAllItems());
+
+    // DEBUG: log how many menu items passed the filter
+    console.log('[Sidebar DEBUG] menuItems count:', menuItems.length, '| items:', menuItems.map(m => m.id));
 
     const handleMenuClick = (item, hasChildren) => {
         if (hasChildren) {

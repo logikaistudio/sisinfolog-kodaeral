@@ -1,10 +1,22 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 function Login({ onLogin }) {
     const [username, setUsername] = useState('')
     const [password, setPassword] = useState('')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
+    const usernameRef = useRef(null)
+    const passwordRef = useRef(null)
+
+    // Clear form fields on mount to prevent browser autofill showing old credentials
+    useEffect(() => {
+        setUsername('')
+        setPassword('')
+        setError('')
+        // Also clear the actual DOM input values (browser autofill bypasses React state)
+        if (usernameRef.current) usernameRef.current.value = ''
+        if (passwordRef.current) passwordRef.current.value = ''
+    }, [])
 
     const handleSubmit = async (e) => {
         e.preventDefault()
@@ -26,6 +38,10 @@ function Login({ onLogin }) {
             if (!response.ok) {
                 throw new Error(data.error || 'Login gagal');
             }
+
+            // DEBUG: Log API response to console
+            console.log('[Login DEBUG] API response user:', data.user);
+            console.log('[Login DEBUG] permissions:', data.user?.permissions);
 
             // Login berhasil
             localStorage.setItem('currentUser', JSON.stringify(data.user));
@@ -105,7 +121,7 @@ function Login({ onLogin }) {
                     Akses Masuk
                 </h2>
 
-                <form onSubmit={handleSubmit} style={{ width: '100%' }}>
+                <form onSubmit={handleSubmit} autoComplete="off" style={{ width: '100%' }}>
                     <div style={{ marginBottom: '20px' }}>
                         <label style={{
                             display: 'block',
@@ -119,10 +135,13 @@ function Login({ onLogin }) {
                             Username
                         </label>
                         <input
+                            ref={usernameRef}
                             type="text"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             placeholder="Masukkan username"
+                            autoComplete="off"
+                            name="nexis-user"
                             style={{
                                 width: '100%',
                                 padding: '14px 16px',
@@ -159,10 +178,13 @@ function Login({ onLogin }) {
                             Password
                         </label>
                         <input
+                            ref={passwordRef}
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="Masukkan password"
+                            autoComplete="new-password"
+                            name="nexis-pass"
                             style={{
                                 width: '100%',
                                 padding: '14px 16px',
