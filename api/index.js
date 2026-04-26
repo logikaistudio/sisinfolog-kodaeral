@@ -1589,8 +1589,8 @@ async function ensureRolesTable() {
             await pool.query(`
                 INSERT INTO roles (name, description, permissions) VALUES 
                 ('Super Admin', 'Full access to all system features', ARRAY['all']),
-                ('Admin', 'Administrative access', ARRAY['manage_users', 'manage_content']),
-                ('User', 'Standard user access', ARRAY['read_content']);
+                ('Admin', 'Administrative access', ARRAY['dashboard_view', 'faslan_view', 'master_data_manage', 'users_manage']),
+                ('User', 'Standard user access', ARRAY['dashboard_view', 'faslan_view']);
             `);
         }
 
