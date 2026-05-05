@@ -1891,7 +1891,7 @@ app.delete('/api/faslabuh/:id', async (req, res) => {
 
 // Bulk Import Faslabuh
 app.post('/api/faslabuh/bulk-import', async (req, res) => {
-    const { data: importData } = req.body;
+    const { data: importData, mode = 'upsert' } = req.body;
 
     if (!Array.isArray(importData) || importData.length === 0) {
         return res.status(400).json({ error: 'Data array is required' });

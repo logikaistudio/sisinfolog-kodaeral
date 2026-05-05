@@ -347,41 +347,43 @@ function Faslabuh() {
     }
 
     const handleExportTemplate = () => {
+        // Kolom diurutkan PERSIS sesuai urutan fallback parser (index 0..34)
+        // Agar template dapat dibaca otomatis tanpa perlu smart-detect
         const templateHeaders = {
-            'No': '',
-            'No. Urut': '',
-            'Lokasi': '',
-            'Alamat': '',
-            'Wilayah': '',
-            'Longitude': '',
-            'Latitude': '',
-            'Nama Dermaga': '',
-            'Konstruksi': '',
-            'Panjang (m)': '',
-            'Lebar (m)': '',
-            'Luas (m²)': '',
-            'Draft LWL (m)': '',
-            'Pasut HWL-LWL (m)': '',
-            'Kondisi (%)': '',
-            'Displacement KRI': '',
-            'Berat Sandar Maks (ton)': '',
-            'Tipe Kapal': '',
-            'Jumlah Maks': '',
-            'Kemampuan Plat Lantai (ton)': '',
-            'Jenis Ranmor': '',
-            'Berat Ranmor (ton)': '',
-            'Titik Sambung Listrik': '',
-            'Kapasitas (A)': '',
-            'Tegangan (V)': '',
-            'Frek (Hz)': '',
-            'Daya (kVA)': '',
-            'Sumber Listrik': '',
-            'Kapasitas Air GWT (m³)': '',
-            'Debit Air (m³/jam)': '',
-            'Sumber Air': '',
-            'Kapasitas BBM': '',
-            'Hydrant': '',
-            'Keterangan': ''
+            'No': '',                            // 0
+            'Provinsi': '',                      // 1
+            'Lokasi': '',                        // 2
+            'Alamat': '',                        // 3
+            'Wilayah': '',                       // 4
+            'Longitude': '',                     // 5
+            'Latitude': '',                      // 6
+            'Nama Dermaga': '',                  // 7
+            'Konstruksi': '',                    // 8
+            'Panjang (m)': '',                   // 9
+            'Lebar (m)': '',                     // 10
+            'Luas (m²)': '',                     // 11
+            'Draft LWL (m)': '',                 // 12
+            'Pasut HWL-LWL (m)': '',             // 13
+            'Kondisi (%)': '',                   // 14
+            'Displacement KRI': '',              // 15
+            'Berat Sandar Maks (ton)': '',       // 16
+            'Tipe Kapal': '',                    // 17
+            'Jumlah Maks': '',                   // 18
+            'Kemampuan Plat Lantai (ton)': '',   // 19
+            'Jenis Ranmor': '',                  // 20
+            'Berat Ranmor (ton)': '',            // 21
+            'Titik Sambung Listrik': '',         // 22
+            'Kapasitas (A)': '',                 // 23
+            'Tegangan (V)': '',                  // 24
+            'Frek (Hz)': '',                     // 25
+            'Daya (kVA)': '',                    // 26
+            'Sumber Listrik': '',               // 27
+            'Kapasitas Air GWT (m³)': '',        // 28
+            'Debit Air (m³/jam)': '',            // 29
+            'Sumber Air': '',                    // 30
+            'Kapasitas BBM': '',                 // 31
+            'Hydrant': '',                       // 32
+            'Keterangan': ''                     // 33
         }
 
         const templateData = [templateHeaders] // Only headers
@@ -420,6 +422,7 @@ function Faslabuh() {
                 // Scan first 20 rows to find key columns
                 const headerMap = {
                     no: -1,
+                    provinsi: -1,
                     lokasi: -1,
                     alamat: -1,
                     wilayah: -1,
@@ -469,30 +472,31 @@ function Faslabuh() {
 
                         // LOCK: Only set if -1 (First match wins from Left to Right, Top to Bottom)
 
-                        if (headerMap.no === -1 && txt === 'NO') { headerMap.no = colIdx; matchCount++ }
+                        if (headerMap.no === -1 && (txt === 'NO' || txt === 'NO.' || txt === 'NOMOR')) { headerMap.no = colIdx; matchCount++ }
+                        if (headerMap.provinsi === -1 && txt === 'PROVINSI') { headerMap.provinsi = colIdx; matchCount++ }
                         if (headerMap.lokasi === -1 && txt === 'LOKASI') { headerMap.lokasi = colIdx; matchCount++ }
                         if (headerMap.alamat === -1 && (txt === 'ALAMAT' || txt.includes('ALAMAT'))) { headerMap.alamat = colIdx; matchCount++ }
                         if (headerMap.wilayah === -1 && txt === 'WILAYAH') { headerMap.wilayah = colIdx; matchCount++ }
-                        if (headerMap.longitude === -1 && (txt.includes('LONGITUDE') || txt.includes('LON') || txt === 'X')) { headerMap.longitude = colIdx; matchCount++ }
-                        if (headerMap.latitude === -1 && (txt.includes('LATITUDE') || txt.includes('LAT') || txt === 'Y')) { headerMap.latitude = colIdx; matchCount++ }
-                        if (headerMap.nama === -1 && (txt.includes('NAMA DERMAGA') || txt === 'NAMA')) { headerMap.nama = colIdx; matchCount++ }
+                        if (headerMap.longitude === -1 && (txt.includes('LONGITUDE') || txt === 'LON' || txt === 'X')) { headerMap.longitude = colIdx; matchCount++ }
+                        if (headerMap.latitude === -1 && (txt.includes('LATITUDE') || txt === 'LAT' || txt === 'Y')) { headerMap.latitude = colIdx; matchCount++ }
+                        if (headerMap.nama === -1 && (txt.includes('NAMA DERMAGA') || txt === 'NAMA DERMAGA')) { headerMap.nama = colIdx; matchCount++ }
                         if (headerMap.konstruksi === -1 && txt.includes('KONSTRUKSI')) { headerMap.konstruksi = colIdx; matchCount++ }
 
                         if (headerMap.panjang === -1 && (txt.includes('PANJANG') || txt === 'P (M)')) { headerMap.panjang = colIdx; matchCount++ }
                         if (headerMap.lebar === -1 && (txt.includes('LEBAR') || txt === 'L (M)')) { headerMap.lebar = colIdx; matchCount++ }
-                        if (headerMap.luas === -1 && (txt.includes('LUAS'))) { headerMap.luas = colIdx; matchCount++ }
-                        if (headerMap.draft === -1 && (txt.includes('DRAFT'))) { headerMap.draft = colIdx; matchCount++ }
-                        if (headerMap.pasut === -1 && (txt.includes('PASUT'))) { headerMap.pasut = colIdx; matchCount++ }
-                        if (headerMap.kondisi === -1 && (txt.includes('KONDISI'))) { headerMap.kondisi = colIdx; matchCount++ }
+                        if (headerMap.luas === -1 && txt.includes('LUAS')) { headerMap.luas = colIdx; matchCount++ }
+                        if (headerMap.draft === -1 && txt.includes('DRAFT')) { headerMap.draft = colIdx; matchCount++ }
+                        if (headerMap.pasut === -1 && txt.includes('PASUT')) { headerMap.pasut = colIdx; matchCount++ }
+                        if (headerMap.kondisi === -1 && txt.includes('KONDISI')) { headerMap.kondisi = colIdx; matchCount++ }
 
                         if (headerMap.sandarKri === -1 && (txt.includes('DISPLACEMENT') || txt.includes('DISP'))) { headerMap.sandarKri = colIdx; matchCount++ }
                         if (headerMap.sandarTon === -1 && (txt.includes('BERAT SANDAR') || txt.includes('SANDAR MAKS'))) { headerMap.sandarTon = colIdx; matchCount++ }
                         if (headerMap.tipeKapal === -1 && txt.includes('TIPE KAPAL')) { headerMap.tipeKapal = colIdx; matchCount++ }
-                        if (headerMap.sandarJml === -1 && txt.includes('JUMLAH')) { headerMap.sandarJml = colIdx; matchCount++ }
+                        if (headerMap.sandarJml === -1 && (txt.includes('JUMLAH MAKS') || txt === 'JUMLAH')) { headerMap.sandarJml = colIdx; matchCount++ }
 
                         if (headerMap.platTon === -1 && (txt.includes('PLAT LANTAI') || txt.includes('KEMAMPUAN PLAT'))) { headerMap.platTon = colIdx; matchCount++ }
                         if (headerMap.ranmorJenis === -1 && txt.includes('JENIS RANMOR')) { headerMap.ranmorJenis = colIdx; matchCount++ }
-                        if (headerMap.ranmorTon === -1 && (txt.includes('BERAT RANMOR'))) { headerMap.ranmorTon = colIdx; matchCount++ }
+                        if (headerMap.ranmorTon === -1 && txt.includes('BERAT RANMOR')) { headerMap.ranmorTon = colIdx; matchCount++ }
 
                         if (headerMap.listrikTitik === -1 && txt.includes('TITIK SAMBUNG')) { headerMap.listrikTitik = colIdx; matchCount++ }
                         if (headerMap.listrikAmp === -1 && (txt.includes('KAPASITAS (A)') || txt === 'AMP' || txt === 'AMPERE')) { headerMap.listrikAmp = colIdx; matchCount++ }
@@ -502,7 +506,7 @@ function Faslabuh() {
                         if (headerMap.listrikSumber === -1 && txt.includes('SUMBER LISTRIK')) { headerMap.listrikSumber = colIdx; matchCount++ }
 
                         if (headerMap.airGwt === -1 && (txt.includes('GWT') || (txt.includes('KAPASITAS') && txt.includes('AIR')))) { headerMap.airGwt = colIdx; matchCount++ }
-                        if (headerMap.airDebit === -1 && (txt.includes('DEBIT') || (txt.includes('DEBIT') && txt.includes('AIR')))) { headerMap.airDebit = colIdx; matchCount++ }
+                        if (headerMap.airDebit === -1 && txt.includes('DEBIT')) { headerMap.airDebit = colIdx; matchCount++ }
                         if (headerMap.airSumber === -1 && txt.includes('SUMBER AIR')) { headerMap.airSumber = colIdx; matchCount++ }
 
                         if (headerMap.bbm === -1 && (txt.includes('BBM') || txt.includes('KAPASITAS BBM'))) { headerMap.bbm = colIdx; matchCount++ }
@@ -510,46 +514,51 @@ function Faslabuh() {
                         if (headerMap.ket === -1 && (txt.includes('KETERANGAN') || txt === 'KET')) { headerMap.ket = colIdx; matchCount++ }
                     })
 
-                    if (matchCount >= 4) detectedHeaderRow = r // Require a bit more confidence
+                    if (matchCount >= 4) detectedHeaderRow = r
                 }
 
-                // Fallback Indices based on typical order if dynamic fails totally (optional but safer)
+                // Fallback Indices - HARUS persis cocok dengan urutan kolom template
+                // No=0, Provinsi=1, Lokasi=2, Alamat=3, Wilayah=4, Lon=5, Lat=6, Nama=7, Konstruksi=8
+                // Panjang=9, Lebar=10, Luas=11, Draft=12, Pasut=13, Kondisi=14
+                // Disp=15, BeratSandar=16, TipeKapal=17, JmlMaks=18
+                // PlatTon=19, RanmorJenis=20, RanmorTon=21
+                // ListrikTitik=22, ListrikAmp=23, ListrikVolt=24, ListrikHz=25, ListrikDaya=26, ListrikSumber=27
+                // AirGwt=28, AirDebit=29, AirSumber=30, BBM=31, Hydrant=32, Ket=33
                 if (headerMap.nama === -1) {
-                    // Try to guess based on standard template order
-                    // No=0, Lokasi=1, Wilayah=2, Lon=3, Lat=4, Nama=5 ...
                     headerMap.no = 0
-                    headerMap.lokasi = 1
-                    headerMap.alamat = 2
-                    headerMap.wilayah = 3
-                    headerMap.longitude = 4
-                    headerMap.latitude = 5
-                    headerMap.nama = 6
-                    headerMap.konstruksi = 7
-                    headerMap.panjang = 8
-                    headerMap.lebar = 9
-                    headerMap.luas = 10
-                    headerMap.draft = 11
-                    headerMap.pasut = 12
-                    headerMap.kondisi = 13
-                    headerMap.sandarKri = 14
-                    headerMap.sandarTon = 15
-                    headerMap.tipeKapal = 16
-                    headerMap.sandarJml = 17
-                    headerMap.platTon = 18
-                    headerMap.ranmorJenis = 19
-                    headerMap.ranmorTon = 20
-                    headerMap.listrikTitik = 21
-                    headerMap.listrikAmp = 22
-                    headerMap.listrikVolt = 23
-                    headerMap.listrikHz = 24
-                    headerMap.listrikDaya = 25
-                    headerMap.listrikSumber = 26
-                    headerMap.airGwt = 27
-                    headerMap.airDebit = 28
-                    headerMap.airSumber = 29
-                    headerMap.bbm = 30
-                    headerMap.hydrant = 31
-                    headerMap.ket = 32
+                    headerMap.provinsi = 1
+                    headerMap.lokasi = 2
+                    headerMap.alamat = 3
+                    headerMap.wilayah = 4
+                    headerMap.longitude = 5
+                    headerMap.latitude = 6
+                    headerMap.nama = 7
+                    headerMap.konstruksi = 8
+                    headerMap.panjang = 9
+                    headerMap.lebar = 10
+                    headerMap.luas = 11
+                    headerMap.draft = 12
+                    headerMap.pasut = 13
+                    headerMap.kondisi = 14
+                    headerMap.sandarKri = 15
+                    headerMap.sandarTon = 16
+                    headerMap.tipeKapal = 17
+                    headerMap.sandarJml = 18
+                    headerMap.platTon = 19
+                    headerMap.ranmorJenis = 20
+                    headerMap.ranmorTon = 21
+                    headerMap.listrikTitik = 22
+                    headerMap.listrikAmp = 23
+                    headerMap.listrikVolt = 24
+                    headerMap.listrikHz = 25
+                    headerMap.listrikDaya = 26
+                    headerMap.listrikSumber = 27
+                    headerMap.airGwt = 28
+                    headerMap.airDebit = 29
+                    headerMap.airSumber = 30
+                    headerMap.bbm = 31
+                    headerMap.hydrant = 32
+                    headerMap.ket = 33
                 }
 
                 console.log('🔍 Detected Column Indices:', headerMap)
@@ -637,7 +646,7 @@ function Faslabuh() {
 
                     return {
                         _rowNumber: rowNum,
-                        provinsi: '',
+                        provinsi: idx.provinsi > -1 ? (row[idx.provinsi] ? String(row[idx.provinsi]).trim() : '') : '',
                         wilayah: lastWilayah || 'Unknown',
                         lokasi: lastLokasi || '',
                         alamat: idx.alamat > -1 ? row[idx.alamat] : '',
