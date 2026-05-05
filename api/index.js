@@ -1876,51 +1876,47 @@ app.post('/api/faslabuh/bulk-import', async (req, res) => {
     console.log(`[FASLABUH IMPORT] Starting: ${importData.length} records, mode=${mode}`);
     const startTime = Date.now();
 
-    const results = {
-        total: importData.length,
-        inserted: 0,
-        updated: 0,
-        failed: 0,
-        errors: []
-    };
+    const results = { total: importData.length, inserted: 0, updated: 0, failed: 0, errors: [] };
 
-    // Auto-migrate: ensure new columns exist (idempotent)
+    // Single DO $$ block = 1 DB round trip for all 29 column migrations
     try {
-        const migrationCols = [
-            'ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS provinsi TEXT',
-            'ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS wilayah TEXT',
-            'ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS lokasi TEXT',
-            'ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS konstruksi TEXT',
-            'ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS lon NUMERIC',
-            'ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS lat NUMERIC',
-            'ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS kode_barang TEXT',
-            'ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS no_sertifikat TEXT',
-            'ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS tgl_sertifikat TEXT',
-            'ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS panjang NUMERIC',
-            'ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS lebar NUMERIC',
-            'ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS luas NUMERIC',
-            'ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS draft_lwl NUMERIC',
-            'ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS pasut_hwl_lwl NUMERIC',
-            'ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS kondisi NUMERIC',
-            "ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS sandar_items JSONB DEFAULT '[]'",
-            'ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS plat_mst_ton NUMERIC',
-            'ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS plat_jenis_ranmor TEXT',
-            'ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS plat_berat_max_ton NUMERIC',
-            'ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS listrik_jml_titik NUMERIC',
-            'ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS listrik_kap_amp NUMERIC',
-            'ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS listrik_tegangan_volt NUMERIC',
-            'ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS listrik_frek_hz NUMERIC',
-            'ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS listrik_sumber TEXT',
-            'ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS listrik_daya_kva NUMERIC',
-            'ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS air_gwt_m3 NUMERIC',
-            'ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS air_debit_m3_jam NUMERIC',
-            'ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS air_sumber TEXT',
-            'ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS hydrant TEXT',
-        ];
-        for (const sql of migrationCols) {
-            await pool.query(sql);
-        }
-        console.log('[FASLABUH IMPORT] Schema migration done');
+        await pool.query(`
+            DO $$
+            BEGIN
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS provinsi TEXT;
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS wilayah TEXT;
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS lokasi TEXT;
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS konstruksi TEXT;
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS lon NUMERIC;
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS lat NUMERIC;
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS kode_barang TEXT;
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS no_sertifikat TEXT;
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS tgl_sertifikat TEXT;
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS panjang NUMERIC;
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS lebar NUMERIC;
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS luas NUMERIC;
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS draft_lwl NUMERIC;
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS pasut_hwl_lwl NUMERIC;
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS kondisi NUMERIC;
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS sandar_items JSONB;
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS plat_mst_ton NUMERIC;
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS plat_jenis_ranmor TEXT;
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS plat_berat_max_ton NUMERIC;
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS listrik_jml_titik NUMERIC;
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS listrik_kap_amp NUMERIC;
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS listrik_tegangan_volt NUMERIC;
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS listrik_frek_hz NUMERIC;
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS listrik_sumber TEXT;
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS listrik_daya_kva NUMERIC;
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS air_gwt_m3 NUMERIC;
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS air_debit_m3_jam NUMERIC;
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS air_sumber TEXT;
+                ALTER TABLE faslabuh ADD COLUMN IF NOT EXISTS hydrant TEXT;
+            END $$;
+        `);
+        // Ensure unique index exists for ON CONFLICT
+        await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS faslabuh_nama_dermaga_uidx ON faslabuh(nama_dermaga)`);
+        console.log('[FASLABUH IMPORT] Migration OK');
     } catch (migErr) {
         console.warn('[FASLABUH IMPORT] Migration warning:', migErr.message);
     }
@@ -1928,43 +1924,34 @@ app.post('/api/faslabuh/bulk-import', async (req, res) => {
     try {
         for (let i = 0; i < importData.length; i++) {
             const item = importData[i];
-
             try {
-                // Normalize item data
-                const itemData = {
+                const d = {
                     provinsi: item.provinsi || null,
                     wilayah: item.wilayah || null,
-                    lokasi: item.lokasi || null,
+                    lokasi: item.lokasi || item.alamat || null,
                     nama_dermaga: item.nama_dermaga || null,
                     konstruksi: item.konstruksi || null,
-                    lon: item.lon || null,
-                    lat: item.lat || null,
+                    lon: item.lon ?? null,
+                    lat: item.lat ?? null,
                     kode_barang: item.kode_barang || null,
                     no_sertifikat: item.no_sertifikat || null,
                     tgl_sertifikat: item.tgl_sertifikat || null,
-
                     panjang: item.panjang ?? item.panjang_m ?? null,
                     lebar: item.lebar ?? item.lebar_m ?? null,
-                    luas: item.luas ?? item.luas_m2 ??
-                        ((item.panjang || item.panjang_m) && (item.lebar || item.lebar_m) ?
-                            (item.panjang || item.panjang_m) * (item.lebar || item.lebar_m) : null),
+                    luas: item.luas ?? item.luas_m2 ?? null,
                     draft_lwl: item.draft_lwl ?? item.draft_lwl_m ?? null,
                     pasut_hwl_lwl: item.pasut_hwl_lwl ?? item.pasut_hwl_lwl_m ?? null,
                     kondisi: item.kondisi ?? item.kondisi_percent ?? null,
-
                     sandar_items: JSON.stringify(item.sandar_items || []),
-
                     plat_mst_ton: item.plat_mst_ton ?? item.kemampuan_plat_lantai_ton ?? null,
                     plat_jenis_ranmor: item.plat_jenis_ranmor ?? item.jenis_ranmor ?? null,
                     plat_berat_max_ton: item.plat_berat_max_ton ?? item.berat_ranmor_ton ?? null,
-
                     listrik_jml_titik: item.listrik_jml_titik ?? item.titik_sambung_listrik ?? null,
                     listrik_kap_amp: item.listrik_kap_amp ?? item.kapasitas_a ?? null,
                     listrik_tegangan_volt: item.listrik_tegangan_volt ?? item.tegangan_v ?? null,
                     listrik_frek_hz: item.listrik_frek_hz ?? item.frek_hz ?? null,
                     listrik_sumber: item.listrik_sumber ?? item.sumber_listrik ?? null,
                     listrik_daya_kva: item.listrik_daya_kva ?? item.daya_kva ?? null,
-
                     air_gwt_m3: item.air_gwt_m3 ?? item.kapasitas_air_gwt_m3 ?? null,
                     air_debit_m3_jam: item.air_debit_m3_jam ?? item.debit_air_m3_jam ?? null,
                     air_sumber: item.air_sumber ?? item.sumber_air ?? null,
@@ -1973,176 +1960,109 @@ app.post('/api/faslabuh/bulk-import', async (req, res) => {
                     keterangan: item.keterangan ?? null
                 };
 
-                if (mode === 'upsert') {
-                    // Check if exists by nama_dermaga
-                    const existing = await pool.query(
-                        'SELECT id FROM faslabuh WHERE nama_dermaga = $1',
-                        [itemData.nama_dermaga]
-                    );
+                if (!d.nama_dermaga) {
+                    results.failed++;
+                    results.errors.push({ row: i + 1, nama_dermaga: 'N/A', error: 'Nama dermaga kosong' });
+                    continue;
+                }
 
-                    if (existing.rows.length > 0) {
-                        // Update existing
-                        await pool.query(`
-                            UPDATE faslabuh SET
-                                provinsi = $1, wilayah = $2, lokasi = $3, konstruksi = $4, lon = $5, lat = $6,
-                                kode_barang = $7, no_sertifikat = $8, tgl_sertifikat = $9,
-                                panjang = $10, lebar = $11, luas = $12, draft_lwl = $13, 
-                                pasut_hwl_lwl = $14, kondisi = $15,
-                                sandar_items = $16, plat_mst_ton = $17, plat_jenis_ranmor = $18, 
-                                plat_berat_max_ton = $19,
-                                listrik_jml_titik = $20, listrik_kap_amp = $21, 
-                                listrik_tegangan_volt = $22, listrik_frek_hz = $23,
-                                listrik_sumber = $24, listrik_daya_kva = $25,
-                                air_gwt_m3 = $26, air_debit_m3_jam = $27, air_sumber = $28,
-                                bbm = $29, hydrant = $30, keterangan = $31,
-                                updated_at = NOW()
-                            WHERE id = $32
-                        `, [
-                            itemData.provinsi, itemData.wilayah, itemData.lokasi, itemData.konstruksi, itemData.lon, itemData.lat,
-                            itemData.kode_barang, itemData.no_sertifikat, itemData.tgl_sertifikat,
-                            itemData.panjang, itemData.lebar, itemData.luas, itemData.draft_lwl,
-                            itemData.pasut_hwl_lwl, itemData.kondisi,
-                            itemData.sandar_items, itemData.plat_mst_ton,
-                            itemData.plat_jenis_ranmor, itemData.plat_berat_max_ton,
-                            itemData.listrik_jml_titik, itemData.listrik_kap_amp,
-                            itemData.listrik_tegangan_volt, itemData.listrik_frek_hz,
-                            itemData.listrik_sumber, itemData.listrik_daya_kva,
-                            itemData.air_gwt_m3, itemData.air_debit_m3_jam, itemData.air_sumber,
-                            itemData.bbm, itemData.hydrant, itemData.keterangan,
-                            existing.rows[0].id
-                        ]);
-                        results.updated++;
-                    } else {
-                        // Insert new
-                        await pool.query(`
-                            INSERT INTO faslabuh (
-                                provinsi, wilayah, lokasi, nama_dermaga, konstruksi, lon, lat,
-                                kode_barang, no_sertifikat, tgl_sertifikat,
-                                panjang, lebar, luas, draft_lwl, pasut_hwl_lwl, kondisi,
-                                sandar_items, plat_mst_ton, plat_jenis_ranmor, plat_berat_max_ton,
-                                listrik_jml_titik, listrik_kap_amp, listrik_tegangan_volt, 
-                                listrik_frek_hz, listrik_sumber, listrik_daya_kva,
-                                air_gwt_m3, air_debit_m3_jam, air_sumber,
-                                bbm, hydrant, keterangan
-                            ) VALUES (
-                                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-                                $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-                                $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31
-                            )
-                        `, [
-                            itemData.provinsi, itemData.wilayah, itemData.lokasi, itemData.nama_dermaga, itemData.konstruksi,
-                            itemData.lon, itemData.lat,
-                            itemData.kode_barang, itemData.no_sertifikat, itemData.tgl_sertifikat,
-                            itemData.panjang, itemData.lebar, itemData.luas,
-                            itemData.draft_lwl, itemData.pasut_hwl_lwl, itemData.kondisi,
-                            itemData.sandar_items, itemData.plat_mst_ton,
-                            itemData.plat_jenis_ranmor, itemData.plat_berat_max_ton,
-                            itemData.listrik_jml_titik, itemData.listrik_kap_amp,
-                            itemData.listrik_tegangan_volt, itemData.listrik_frek_hz,
-                            itemData.listrik_sumber, itemData.listrik_daya_kva,
-                            itemData.air_gwt_m3, itemData.air_debit_m3_jam, itemData.air_sumber,
-                            itemData.bbm, itemData.hydrant, itemData.keterangan
-                        ]);
-                        results.inserted++;
-                    }
-                } else if (mode === 'insert-only') {
-                    // Insert only - will fail if duplicate
-                    await pool.query(`
+                if (mode === 'upsert') {
+                    // 1 query: INSERT ON CONFLICT UPDATE
+                    const r = await pool.query(`
                         INSERT INTO faslabuh (
-                            provinsi, wilayah, lokasi, nama_dermaga, konstruksi, lon, lat,
+                            nama_dermaga, provinsi, wilayah, lokasi, konstruksi, lon, lat,
                             kode_barang, no_sertifikat, tgl_sertifikat,
                             panjang, lebar, luas, draft_lwl, pasut_hwl_lwl, kondisi,
                             sandar_items, plat_mst_ton, plat_jenis_ranmor, plat_berat_max_ton,
-                            listrik_jml_titik, listrik_kap_amp, listrik_tegangan_volt, 
-                            listrik_frek_hz, listrik_sumber, listrik_daya_kva,
-                            air_gwt_m3, air_debit_m3_jam, air_sumber,
-                            bbm, hydrant, keterangan
+                            listrik_jml_titik, listrik_kap_amp, listrik_tegangan_volt, listrik_frek_hz, listrik_sumber, listrik_daya_kva,
+                            air_gwt_m3, air_debit_m3_jam, air_sumber, bbm, hydrant, keterangan
                         ) VALUES (
-                            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-                            $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-                            $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31
+                            $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,
+                            $17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32
+                        )
+                        ON CONFLICT (nama_dermaga) DO UPDATE SET
+                            provinsi=EXCLUDED.provinsi, wilayah=EXCLUDED.wilayah, lokasi=EXCLUDED.lokasi,
+                            konstruksi=EXCLUDED.konstruksi, lon=EXCLUDED.lon, lat=EXCLUDED.lat,
+                            kode_barang=EXCLUDED.kode_barang, no_sertifikat=EXCLUDED.no_sertifikat,
+                            tgl_sertifikat=EXCLUDED.tgl_sertifikat, panjang=EXCLUDED.panjang,
+                            lebar=EXCLUDED.lebar, luas=EXCLUDED.luas, draft_lwl=EXCLUDED.draft_lwl,
+                            pasut_hwl_lwl=EXCLUDED.pasut_hwl_lwl, kondisi=EXCLUDED.kondisi,
+                            sandar_items=EXCLUDED.sandar_items, plat_mst_ton=EXCLUDED.plat_mst_ton,
+                            plat_jenis_ranmor=EXCLUDED.plat_jenis_ranmor, plat_berat_max_ton=EXCLUDED.plat_berat_max_ton,
+                            listrik_jml_titik=EXCLUDED.listrik_jml_titik, listrik_kap_amp=EXCLUDED.listrik_kap_amp,
+                            listrik_tegangan_volt=EXCLUDED.listrik_tegangan_volt, listrik_frek_hz=EXCLUDED.listrik_frek_hz,
+                            listrik_sumber=EXCLUDED.listrik_sumber, listrik_daya_kva=EXCLUDED.listrik_daya_kva,
+                            air_gwt_m3=EXCLUDED.air_gwt_m3, air_debit_m3_jam=EXCLUDED.air_debit_m3_jam,
+                            air_sumber=EXCLUDED.air_sumber, bbm=EXCLUDED.bbm, hydrant=EXCLUDED.hydrant,
+                            keterangan=EXCLUDED.keterangan, updated_at=NOW()
+                        RETURNING (xmax = 0) AS inserted
+                    `, [
+                        d.nama_dermaga, d.provinsi, d.wilayah, d.lokasi, d.konstruksi, d.lon, d.lat,
+                        d.kode_barang, d.no_sertifikat, d.tgl_sertifikat,
+                        d.panjang, d.lebar, d.luas, d.draft_lwl, d.pasut_hwl_lwl, d.kondisi,
+                        d.sandar_items, d.plat_mst_ton, d.plat_jenis_ranmor, d.plat_berat_max_ton,
+                        d.listrik_jml_titik, d.listrik_kap_amp, d.listrik_tegangan_volt, d.listrik_frek_hz, d.listrik_sumber, d.listrik_daya_kva,
+                        d.air_gwt_m3, d.air_debit_m3_jam, d.air_sumber, d.bbm, d.hydrant, d.keterangan
+                    ]);
+                    if (r.rows[0].inserted) results.inserted++; else results.updated++;
+
+                } else if (mode === 'insert-only') {
+                    await pool.query(`
+                        INSERT INTO faslabuh (
+                            nama_dermaga, provinsi, wilayah, lokasi, konstruksi, lon, lat,
+                            kode_barang, no_sertifikat, tgl_sertifikat,
+                            panjang, lebar, luas, draft_lwl, pasut_hwl_lwl, kondisi,
+                            sandar_items, plat_mst_ton, plat_jenis_ranmor, plat_berat_max_ton,
+                            listrik_jml_titik, listrik_kap_amp, listrik_tegangan_volt, listrik_frek_hz, listrik_sumber, listrik_daya_kva,
+                            air_gwt_m3, air_debit_m3_jam, air_sumber, bbm, hydrant, keterangan
+                        ) VALUES (
+                            $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,
+                            $17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32
                         )
                     `, [
-                        itemData.provinsi, itemData.wilayah, itemData.lokasi, itemData.nama_dermaga, itemData.konstruksi,
-                        itemData.lon, itemData.lat,
-                        itemData.kode_barang, itemData.no_sertifikat, itemData.tgl_sertifikat,
-                        itemData.panjang, itemData.lebar, itemData.luas,
-                        itemData.draft_lwl, itemData.pasut_hwl_lwl, itemData.kondisi,
-                        itemData.sandar_items, itemData.plat_mst_ton,
-                        itemData.plat_jenis_ranmor, itemData.plat_berat_max_ton,
-                        itemData.listrik_jml_titik, itemData.listrik_kap_amp,
-                        itemData.listrik_tegangan_volt, itemData.listrik_frek_hz,
-                        itemData.listrik_sumber, itemData.listrik_daya_kva,
-                        itemData.air_gwt_m3, itemData.air_debit_m3_jam, itemData.air_sumber,
-                        itemData.bbm, itemData.hydrant, itemData.keterangan
+                        d.nama_dermaga, d.provinsi, d.wilayah, d.lokasi, d.konstruksi, d.lon, d.lat,
+                        d.kode_barang, d.no_sertifikat, d.tgl_sertifikat,
+                        d.panjang, d.lebar, d.luas, d.draft_lwl, d.pasut_hwl_lwl, d.kondisi,
+                        d.sandar_items, d.plat_mst_ton, d.plat_jenis_ranmor, d.plat_berat_max_ton,
+                        d.listrik_jml_titik, d.listrik_kap_amp, d.listrik_tegangan_volt, d.listrik_frek_hz, d.listrik_sumber, d.listrik_daya_kva,
+                        d.air_gwt_m3, d.air_debit_m3_jam, d.air_sumber, d.bbm, d.hydrant, d.keterangan
                     ]);
                     results.inserted++;
-                } else if (mode === 'update-only') {
-                    // Update only - skip if not exists
-                    const updateResult = await pool.query(`
-                        UPDATE faslabuh SET
-                            provinsi = $1, wilayah = $2, lokasi = $3, konstruksi = $4, lon = $5, lat = $6,
-                            kode_barang = $7, no_sertifikat = $8, tgl_sertifikat = $9,
-                            panjang = $10, lebar = $11, luas = $12, draft_lwl = $13, 
-                            pasut_hwl_lwl = $14, kondisi = $15,
-                            sandar_items = $16, plat_mst_ton = $17, plat_jenis_ranmor = $18, 
-                            plat_berat_max_ton = $19,
-                            listrik_jml_titik = $20, listrik_kap_amp = $21, 
-                            listrik_tegangan_volt = $22, listrik_frek_hz = $23,
-                            listrik_sumber = $24, listrik_daya_kva = $25,
-                            air_gwt_m3 = $26, air_debit_m3_jam = $27, air_sumber = $28,
-                            bbm = $29, hydrant = $30, keterangan = $31,
-                            updated_at = NOW()
-                        WHERE nama_dermaga = $32
-                    `, [
-                        itemData.provinsi, itemData.wilayah, itemData.lokasi, itemData.konstruksi, itemData.lon, itemData.lat,
-                        itemData.kode_barang, itemData.no_sertifikat, itemData.tgl_sertifikat,
-                        itemData.panjang, itemData.lebar, itemData.luas, itemData.draft_lwl,
-                        itemData.pasut_hwl_lwl, itemData.kondisi,
-                        itemData.sandar_items, itemData.plat_mst_ton,
-                        itemData.plat_jenis_ranmor, itemData.plat_berat_max_ton,
-                        itemData.listrik_jml_titik, itemData.listrik_kap_amp,
-                        itemData.listrik_tegangan_volt, itemData.listrik_frek_hz,
-                        itemData.listrik_sumber, itemData.listrik_daya_kva,
-                        itemData.air_gwt_m3, itemData.air_debit_m3_jam, itemData.air_sumber,
-                        itemData.bbm, itemData.hydrant, itemData.keterangan,
-                        itemData.nama_dermaga
-                    ]);
 
-                    if (updateResult.rowCount > 0) {
-                        results.updated++;
-                    } else {
-                        results.failed++;
-                        results.errors.push({
-                            row: i + 1,
-                            nama_dermaga: item.nama_dermaga,
-                            error: 'Data tidak ditemukan'
-                        });
-                    }
+                } else if (mode === 'update-only') {
+                    const upd = await pool.query(`
+                        UPDATE faslabuh SET
+                            provinsi=$1, wilayah=$2, lokasi=$3, konstruksi=$4, lon=$5, lat=$6,
+                            kode_barang=$7, no_sertifikat=$8, tgl_sertifikat=$9,
+                            panjang=$10, lebar=$11, luas=$12, draft_lwl=$13, pasut_hwl_lwl=$14, kondisi=$15,
+                            sandar_items=$16, plat_mst_ton=$17, plat_jenis_ranmor=$18, plat_berat_max_ton=$19,
+                            listrik_jml_titik=$20, listrik_kap_amp=$21, listrik_tegangan_volt=$22,
+                            listrik_frek_hz=$23, listrik_sumber=$24, listrik_daya_kva=$25,
+                            air_gwt_m3=$26, air_debit_m3_jam=$27, air_sumber=$28,
+                            bbm=$29, hydrant=$30, keterangan=$31, updated_at=NOW()
+                        WHERE nama_dermaga=$32
+                    `, [
+                        d.provinsi, d.wilayah, d.lokasi, d.konstruksi, d.lon, d.lat,
+                        d.kode_barang, d.no_sertifikat, d.tgl_sertifikat,
+                        d.panjang, d.lebar, d.luas, d.draft_lwl, d.pasut_hwl_lwl, d.kondisi,
+                        d.sandar_items, d.plat_mst_ton, d.plat_jenis_ranmor, d.plat_berat_max_ton,
+                        d.listrik_jml_titik, d.listrik_kap_amp, d.listrik_tegangan_volt,
+                        d.listrik_frek_hz, d.listrik_sumber, d.listrik_daya_kva,
+                        d.air_gwt_m3, d.air_debit_m3_jam, d.air_sumber,
+                        d.bbm, d.hydrant, d.keterangan, d.nama_dermaga
+                    ]);
+                    if (upd.rowCount > 0) results.updated++;
+                    else { results.failed++; results.errors.push({ row: i + 1, nama_dermaga: d.nama_dermaga, error: 'Data tidak ditemukan' }); }
                 }
-            } catch (err) {
+            } catch (rowErr) {
                 results.failed++;
                 if (results.errors.length < 10) {
-                    results.errors.push({
-                        row: i + 1,
-                        nama_dermaga: item.nama_dermaga || 'N/A',
-                        error: err.message.substring(0, 100)
-                    });
+                    results.errors.push({ row: i + 1, nama_dermaga: item.nama_dermaga || 'N/A', error: rowErr.message.substring(0, 150) });
                 }
             }
         }
 
-        const elapsed = Date.now() - startTime;
-        console.log(`[FASLABUH IMPORT] Done in ${elapsed}ms: inserted=${results.inserted}, updated=${results.updated}, failed=${results.failed}`);
-
-        if (results.failed > 10) {
-            results.errors.push({
-                row: '-',
-                nama_dermaga: '-',
-                error: `... dan ${results.failed - 10} error lainnya`
-            });
-        }
-
+        console.log(`[FASLABUH IMPORT] Done in ${Date.now() - startTime}ms: inserted=${results.inserted}, updated=${results.updated}, failed=${results.failed}`);
         res.json(results);
     } catch (err) {
         console.error('[FASLABUH IMPORT] Fatal error:', err);
