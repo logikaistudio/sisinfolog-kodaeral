@@ -749,8 +749,18 @@ function Faslabuh() {
             })
 
             if (!response.ok) {
-                const error = await response.json()
-                throw new Error(error.details || error.error || 'Import failed')
+                let errMsg = `HTTP ${response.status}`
+                try {
+                    const errBody = await response.text()
+                    try {
+                        const errJson = JSON.parse(errBody)
+                        errMsg = errJson.details || errJson.error || errMsg
+                    } catch {
+                        // Response is HTML or plain text (e.g. Vercel 500 page)
+                        errMsg = errBody.substring(0, 200)
+                    }
+                } catch { /* ignore */ }
+                throw new Error(errMsg)
             }
 
             const result = await response.json()
