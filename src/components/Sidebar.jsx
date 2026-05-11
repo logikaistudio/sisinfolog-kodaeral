@@ -17,7 +17,8 @@ function Sidebar({ currentPage, setCurrentPage, collapsed, setCollapsed, mobileO
             // Build a map: areaName (case-insensitive key) -> { name, count }
             const areaMap = new Map();
             data.forEach(item => {
-                const areaName = (item.area || '').trim();
+                // Remove extra spaces to avoid duplicates like "Banpres   Ciangsana" vs "Banpres Ciangsana"
+                const areaName = (item.area || '').trim().replace(/\s+/g, ' ');
                 if (!areaName) return;
                 const lower = areaName.toLowerCase();
                 if (areaMap.has(lower)) {
