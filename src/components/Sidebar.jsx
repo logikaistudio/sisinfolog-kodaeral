@@ -17,18 +17,9 @@ function Sidebar({ currentPage, setCurrentPage, collapsed, setCollapsed, mobileO
             // Build a map: areaName (case-insensitive key) -> { name, count }
             const areaMap = new Map();
             data.forEach(item => {
-                // Remove extra spaces to avoid duplicates like "Banpres   Ciangsana" vs "Banpres Ciangsana"
-                let areaName = (item.area || '').trim().replace(/\s+/g, ' ');
+                const areaName = (item.area || '').trim();
                 if (!areaName) return;
                 
-                // Normalize known typos and casing issues
-                const lowerForCheck = areaName.toLowerCase();
-                if (lowerForCheck === 'banpres caingsana' || lowerForCheck === 'banpres cingasana') {
-                    areaName = 'Banpres Ciangsana';
-                } else if (lowerForCheck === 'cibogo') {
-                    areaName = 'Cibogo';
-                }
-
                 const lower = areaName.toLowerCase();
                 if (areaMap.has(lower)) {
                     areaMap.get(lower).count += 1;
