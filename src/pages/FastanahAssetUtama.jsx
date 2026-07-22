@@ -21,6 +21,53 @@ function FastanahAssetUtama() {
     const FONT_SYSTEM = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
     const FONT_MONO = 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace';
 
+    // --- Coordinate parser (handles decimal, DMS, koma desimal Indonesia) ---
+    const parseCoordinatesLocal = (coordString) => {
+        if (!coordString || coordString === '-' || String(coordString).trim() === '') return null
+        let str = String(coordString).trim()
+        // DMS Lengkap: 6°09'51.78"S 106°50'22.68"E
+        const dmsPattern = /(\d+)\s*[°ᵒo]\s*(\d+)\s*[\u2032'´]\s*([\d.]+)\s*[\u2033"\u20ba]?\s*[^NS]*([NS])[^\u00b0\d]*(\d+)\s*[°ᵒo]\s*(\d+)\s*[\u2032'´]\s*([\d.]+)\s*[\u2033"\u20ba]?\s*[^EW]*([EW])/i
+        const dmsMatch = str.match(dmsPattern)
+        if (dmsMatch) {
+            const dmsToDecimal = (deg, min, sec, dir) => {
+                let d = Math.abs(parseFloat(deg) || 0) + (parseFloat(min) || 0) / 60 + (parseFloat(sec) || 0) / 3600
+                if (dir === 'S' || dir === 'W') d = -d
+                return d
+            }
+            const lat = dmsToDecimal(dmsMatch[1], dmsMatch[2], dmsMatch[3], dmsMatch[4].toUpperCase())
+            const lon = dmsToDecimal(dmsMatch[5], dmsMatch[6], dmsMatch[7], dmsMatch[8].toUpperCase())
+            return [parseFloat(lat.toFixed(6)), parseFloat(lon.toFixed(6))]
+        }
+        // Decimal: normalise koma desimal Indonesia lalu parse dua angka
+        let parts = []
+        if (str.includes(';')) {
+            parts = str.split(';').map(s => s.replace(',', '.'))
+        } else {
+            const commaCount = (str.match(/,/g) || []).length
+            if (commaCount === 1) {
+                parts = str.split(',')
+            } else if (commaCount > 1) {
+                const normalized = str.replace(/(\d),(\d)/g, '$1.$2')
+                parts = normalized.includes(',') ? normalized.split(',') : normalized.split(/\s+/)
+            } else {
+                parts = str.split(/\s+/)
+            }
+        }
+        parts = parts.map(s => s.trim()).filter(s => s)
+        if (parts.length >= 2) {
+            const num1 = parseFloat(parts[0])
+            const num2 = parseFloat(parts[1])
+            if (!isNaN(num1) && !isNaN(num2)) {
+                let lat, lon
+                if (Math.abs(num1) > 90) { lon = num1; lat = num2 }
+                else if (Math.abs(num2) > 90) { lat = num1; lon = num2 }
+                else { lat = num1; lon = num2 }
+                if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) return [lat, lon]
+            }
+        }
+        return null
+    }
+
     const btnStyle = (bgColor, textColor, borderColor) => ({
         padding: '10px 16px',
         background: bgColor,
@@ -122,6 +169,9 @@ function FastanahAssetUtama() {
                             latitude: item.latitude || '',
                             alamat: item.alamat || '',
                             photos: savedPhotos,
+                            // Legacy coord fields — kept as fallback for editor pre-fill
+                            _legacy_coordinates: item.coordinates || '',
+                            _legacy_location: item.location || '',
                         };
                     });
 
@@ -146,11 +196,28 @@ function FastanahAssetUtama() {
 
     const handleRowClick = (item) => {
         setCurrentItem(item);
+
+        // Resolve lat/lon: gunakan field tersimpan, atau fallback ke legacy jika kosong
+        let resolvedLat = item.latitude || ''
+        let resolvedLon = item.longitude || ''
+
+        if (!resolvedLat || !resolvedLon) {
+            // Coba parse dari field legacy coordinates atau location
+            const legacySrc = item._legacy_coordinates || item._legacy_location || ''
+            if (legacySrc) {
+                const parsed = parseCoordinatesLocal(legacySrc)
+                if (parsed) {
+                    resolvedLat = String(parsed[0])
+                    resolvedLon = String(parsed[1])
+                }
+            }
+        }
+
         setEditData({
             lanal: item.lanal || '',
             identifikasi_aset: item.identifikasi_aset || '',
-            longitude: item.longitude || '',
-            latitude: item.latitude || '',
+            longitude: resolvedLon,
+            latitude: resolvedLat,
             alamat: item.alamat || item.alamat_lengkap || '',
         });
         setPhotos(item.photos || []);

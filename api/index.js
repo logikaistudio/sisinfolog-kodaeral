@@ -1182,6 +1182,30 @@ app.put('/api/master-asset-utama/:id', async (req, res) => {
     }
 });
 
+// PATCH koordinat saja untuk master asset utama (dipanggil dari fitur klik peta di PetaFaslan)
+app.patch('/api/master-asset-utama/:id/coordinates', async (req, res) => {
+    const { id } = req.params;
+    const { latitude, longitude } = req.body;
+    try {
+        await ensureMasterAssetUtamaTable();
+        if (!latitude || !longitude) {
+            return res.status(400).json({ error: 'latitude and longitude are required' });
+        }
+        const result = await pool.query(
+            'UPDATE master_asset_utama SET latitude = $1, longitude = $2, updated_at = NOW() WHERE id = $3 RETURNING *',
+            [String(latitude).trim(), String(longitude).trim(), id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Asset not found' });
+        }
+        console.log(`[MASTER ASSET UTAMA] Coordinates updated: id=${id}, lat=${latitude}, lon=${longitude}`);
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('[MASTER ASSET UTAMA] PATCH coordinates error:', err);
+        res.status(500).json({ error: 'Internal server error', details: err.message });
+    }
+});
+
 // --- HARPAN API ---
 app.get('/api/harpan', async (req, res) => {
     try {

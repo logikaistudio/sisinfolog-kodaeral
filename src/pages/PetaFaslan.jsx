@@ -395,13 +395,46 @@ function PetaFaslan({ isDashboard = false, showDisaster = true }) {
                 setAssetsHarkan(validHarkan)
 
                 // Filter assets_tanah — support new longitude/latitude fields, fallback to location or coordinates
-                const validTanah = dataTanah.filter(asset => {
-                    // Cek field latitude/longitude dari DB Master Asset Utama
-                    if (asset.latitude && asset.longitude && !isNaN(parseFloat(asset.latitude)) && !isNaN(parseFloat(asset.longitude))) {
-                        asset._parsedCoords = [parseFloat(asset.latitude), parseFloat(asset.longitude)]
-                        return true
+                // Helper: safely parse a lat/lon string value (handles DMS, comma-decimal, swapped order)
+                const safeParseCoord = (latStr, lonStr) => {
+                    if (!latStr || !lonStr) return null
+                    // Normalise koma desimal Indonesia: "-6,1234" → "-6.1234"
+                    const normLat = String(latStr).trim().replace(/,/g, '.')
+                    const normLon = String(lonStr).trim().replace(/,/g, '.')
+                    const lat = parseFloat(normLat)
+                    const lon = parseFloat(normLon)
+                    if (isNaN(lat) || isNaN(lon)) return null
+                    // Auto-detect swap: Longitude Indonesia 95–141, Latitude -11–6
+                    if (Math.abs(lat) > 90) {
+                        // Kemungkinan lat & lon tertukar
+                        if (lon >= -90 && lon <= 90 && lat >= -180 && lat <= 180) {
+                            return [lon, lat]
+                        }
+                        return null
                     }
-                    // Cek field coordinates dulu (legacy)
+                    if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+                        return [lat, lon]
+                    }
+                    return null
+                }
+
+                const validTanah = dataTanah.filter(asset => {
+                    // 1. Coba field latitude/longitude dari DB (dengan safe parse & auto-swap)
+                    if (asset.latitude && asset.longitude) {
+                        const coords = safeParseCoord(asset.latitude, asset.longitude)
+                        if (coords) {
+                            asset._parsedCoords = coords
+                            return true
+                        }
+                        // Jika format DMS (misal "6°09'51\"S")
+                        const combined = `${asset.latitude} ${asset.longitude}`
+                        const dmsCoords = parseCoordinates(combined)
+                        if (dmsCoords) {
+                            asset._parsedCoords = dmsCoords
+                            return true
+                        }
+                    }
+                    // 2. Cek field coordinates (legacy)
                     if (asset.coordinates && asset.coordinates !== '-') {
                         const coords = parseCoordinates(asset.coordinates)
                         if (coords) {
@@ -409,7 +442,7 @@ function PetaFaslan({ isDashboard = false, showDisaster = true }) {
                             return true
                         }
                     }
-                    // Fallback: coba field location yang berisi DMS (legacy)
+                    // 3. Fallback: field location berisi DMS (legacy)
                     if (asset.location) {
                         const coords = parseCoordinates(asset.location)
                         if (coords) {
@@ -421,12 +454,31 @@ function PetaFaslan({ isDashboard = false, showDisaster = true }) {
                 })
 
                 const validBangunan = dataBangunan.filter(asset => {
-                    if (asset.latitude && asset.longitude && !isNaN(parseFloat(asset.latitude)) && !isNaN(parseFloat(asset.longitude))) {
-                        asset._parsedCoords = [parseFloat(asset.latitude), parseFloat(asset.longitude)]
-                        return true
+                    // 1. Coba field latitude/longitude (dengan safe parse & auto-swap)
+                    if (asset.latitude && asset.longitude) {
+                        const coords = safeParseCoord(asset.latitude, asset.longitude)
+                        if (coords) {
+                            asset._parsedCoords = coords
+                            return true
+                        }
+                        const combined = `${asset.latitude} ${asset.longitude}`
+                        const dmsCoords = parseCoordinates(combined)
+                        if (dmsCoords) {
+                            asset._parsedCoords = dmsCoords
+                            return true
+                        }
                     }
-                    if (asset.coordinates) {
+                    // 2. Cek field coordinates (legacy)
+                    if (asset.coordinates && asset.coordinates !== '-') {
                         const coords = parseCoordinates(asset.coordinates)
+                        if (coords) {
+                            asset._parsedCoords = coords
+                            return true
+                        }
+                    }
+                    // 3. Fallback: field location berisi DMS (legacy)
+                    if (asset.location) {
+                        const coords = parseCoordinates(asset.location)
                         if (coords) {
                             asset._parsedCoords = coords
                             return true
