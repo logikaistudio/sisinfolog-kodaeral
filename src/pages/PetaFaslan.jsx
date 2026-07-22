@@ -418,20 +418,65 @@ function PetaFaslan({ isDashboard = false, showDisaster = true }) {
                     return null
                 }
 
-                const validTanah = dataTanah.filter(asset => {
+                // Table base coordinates for fallback regions in Kodaeral 3 / Lantamal III
+                const LANAL_BASE_MAP = {
+                    'priok': [-6.115, 106.885],
+                    'jakarta': [-6.120, 106.880],
+                    'banten': [-5.980, 106.010],
+                    'cirebon': [-6.715, 108.560],
+                    'lampung': [-5.450, 105.260],
+                    'palembang': [-2.990, 104.755],
+                    'bengkulu': [-3.800, 102.265],
+                    'bangka': [-2.130, 106.110],
+                    'belitung': [-2.740, 107.650],
+                    'bandung': [-6.917, 107.619],
+                    'pontianak': [-0.026, 109.342],
+                    'sukabumi': [-6.920, 106.925],
+                    'indramayu': [-6.326, 108.320],
+                    'cilacap': [-7.720, 109.008],
+                    'karawang': [-6.305, 107.300],
+                    'bogor': [-6.597, 106.799],
+                    'tangerang': [-6.178, 106.630],
+                    'bekasi': [-6.238, 106.975],
+                }
+
+                const getBaseCoordsForAsset = (asset, index) => {
+                    const text = `${asset.lanal || ''} ${asset.nama_satker || ''} ${asset.nama_barang || ''} ${asset.wilayah || ''} ${asset.lokasi || ''} ${asset.nama_dermaga || ''} ${asset.kab_kota || ''} ${asset.provinsi || ''} ${asset.alamat || ''}`.toLowerCase()
+                    let base = null
+                    for (const [key, coords] of Object.entries(LANAL_BASE_MAP)) {
+                        if (text.includes(key)) {
+                            base = coords
+                            break
+                        }
+                    }
+                    if (!base) {
+                        base = [-6.120, 106.880] // Default Jakarta Lantamal III area
+                    }
+                    // Generate unique deterministic offset based on asset ID/key
+                    const idVal = asset.id || asset.unique_key || index
+                    const seed = (String(idVal).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + (index * 23)) % 1000
+                    const angle = (seed / 1000) * 2 * Math.PI
+                    const radius = 0.003 + ((seed % 90) / 1000) * 0.02
+                    return [base[0] + Math.sin(angle) * radius, base[1] + Math.cos(angle) * radius]
+                }
+
+                // Map ALL 329 assets_tanah — preserve exact coordinates if present, fallback to regional base coords
+                const validTanah = dataTanah.map((asset, index) => {
                     // 1. Coba field latitude/longitude dari DB (dengan safe parse & auto-swap)
                     if (asset.latitude && asset.longitude) {
                         const coords = safeParseCoord(asset.latitude, asset.longitude)
                         if (coords) {
                             asset._parsedCoords = coords
-                            return true
+                            asset._isEstimated = false
+                            return asset
                         }
                         // Jika format DMS (misal "6°09'51\"S")
                         const combined = `${asset.latitude} ${asset.longitude}`
                         const dmsCoords = parseCoordinates(combined)
                         if (dmsCoords) {
                             asset._parsedCoords = dmsCoords
-                            return true
+                            asset._isEstimated = false
+                            return asset
                         }
                     }
                     // 2. Cek field coordinates (legacy)
@@ -439,7 +484,8 @@ function PetaFaslan({ isDashboard = false, showDisaster = true }) {
                         const coords = parseCoordinates(asset.coordinates)
                         if (coords) {
                             asset._parsedCoords = coords
-                            return true
+                            asset._isEstimated = false
+                            return asset
                         }
                     }
                     // 3. Fallback: field location berisi DMS (legacy)
@@ -447,47 +493,66 @@ function PetaFaslan({ isDashboard = false, showDisaster = true }) {
                         const coords = parseCoordinates(asset.location)
                         if (coords) {
                             asset._parsedCoords = coords
-                            return true
+                            asset._isEstimated = false
+                            return asset
                         }
                     }
-                    return false
+                    // 4. Fallback perkiraan koordinat berdasarkan Wilayah/Lanal agar seluruh 329 aset tampil di peta
+                    asset._parsedCoords = getBaseCoordsForAsset(asset, index)
+                    asset._isEstimated = true
+                    return asset
                 })
 
-                const validBangunan = dataBangunan.filter(asset => {
-                    // 1. Coba field latitude/longitude (dengan safe parse & auto-swap)
+                const validBangunan = dataBangunan.map((asset, index) => {
                     if (asset.latitude && asset.longitude) {
                         const coords = safeParseCoord(asset.latitude, asset.longitude)
                         if (coords) {
                             asset._parsedCoords = coords
-                            return true
+                            asset._isEstimated = false
+                            return asset
                         }
                         const combined = `${asset.latitude} ${asset.longitude}`
                         const dmsCoords = parseCoordinates(combined)
                         if (dmsCoords) {
                             asset._parsedCoords = dmsCoords
-                            return true
+                            asset._isEstimated = false
+                            return asset
                         }
                     }
-                    // 2. Cek field coordinates (legacy)
                     if (asset.coordinates && asset.coordinates !== '-') {
                         const coords = parseCoordinates(asset.coordinates)
                         if (coords) {
                             asset._parsedCoords = coords
-                            return true
+                            asset._isEstimated = false
+                            return asset
                         }
                     }
-                    // 3. Fallback: field location berisi DMS (legacy)
                     if (asset.location) {
                         const coords = parseCoordinates(asset.location)
                         if (coords) {
                             asset._parsedCoords = coords
-                            return true
+                            asset._isEstimated = false
+                            return asset
                         }
                     }
-                    return false
+                    asset._parsedCoords = getBaseCoordsForAsset(asset, index)
+                    asset._isEstimated = true
+                    return asset
                 })
 
-                const validFaslabuh = dataFaslabuh.filter(f => f.lat && f.lon && !isNaN(parseFloat(f.lat)) && !isNaN(parseFloat(f.lon)))
+                const validFaslabuh = dataFaslabuh.map((f, index) => {
+                    if (f.lat && f.lon) {
+                        const coords = safeParseCoord(f.lat, f.lon)
+                        if (coords) {
+                            f._parsedCoords = coords
+                            f._isEstimated = false
+                            return f
+                        }
+                    }
+                    f._parsedCoords = getBaseCoordsForAsset({ ...f, lanal: f.wilayah || f.lokasi || f.nama_dermaga }, index)
+                    f._isEstimated = true
+                    return f
+                })
 
                 setAssetsTanah(validTanah)
                 setAssetsBangunan(validBangunan)
@@ -1017,6 +1082,11 @@ function PetaFaslan({ isDashboard = false, showDisaster = true }) {
                                             }}>
                                                 {asset.lanal || 'LANAL TIDAK TERDATA'}
                                             </div>
+                                            {asset._isEstimated && (
+                                                <div style={{ fontSize: '10px', background: '#fef3c7', color: '#b45309', padding: '3px 8px', borderRadius: '4px', marginBottom: '6px', fontWeight: '600' }}>
+                                                    📍 Perkiraan Wilayah ({asset.lanal || asset.kab_kota || 'Kodaeral 3'})
+                                                </div>
+                                            )}
                                             <div style={{
                                                 fontSize: '18px',
                                                 fontWeight: '700',
@@ -1146,11 +1216,8 @@ function PetaFaslan({ isDashboard = false, showDisaster = true }) {
 
                         {/* Markers for Faslabuh */}
                         {assetsFaslabuh.map((asset) => {
-                            const lat = parseFloat(asset.lat)
-                            const lon = parseFloat(asset.lon)
-
-                            // Ensure valid coords
-                            if (isNaN(lat) || isNaN(lon)) return null
+                            const coords = asset._parsedCoords || (asset.lat && asset.lon ? [parseFloat(asset.lat), parseFloat(asset.lon)] : null)
+                            if (!coords) return null
 
                             // Parse photos safely (handle string or array)
                             let photos = []
@@ -1165,7 +1232,7 @@ function PetaFaslan({ isDashboard = false, showDisaster = true }) {
                             }
 
                             return (
-                                <Marker key={`faslabuh-${asset.id}`} position={[lat, lon]} icon={faslabuhIcon}>
+                                <Marker key={`faslabuh-${asset.id}`} position={coords} icon={faslabuhIcon}>
                                     <Popup>
                                         <div style={{ minWidth: '240px', maxWidth: '300px' }}>
                                             <div style={{
