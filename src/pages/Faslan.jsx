@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import PropTypes from 'prop-types'
 import { read, utils, writeFile } from 'xlsx'
-import jsPDF from 'jspdf'
-import 'jspdf-autotable'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import ErrorBoundary from '../components/ErrorBoundary'
 
 function Faslan({ type }) {
@@ -387,7 +387,7 @@ function Faslan({ type }) {
             }
         });
 
-        doc.autoTable({
+        autoTable(doc, {
             head: [tableColumn],
             body: tableRows,
             startY: yPosition,

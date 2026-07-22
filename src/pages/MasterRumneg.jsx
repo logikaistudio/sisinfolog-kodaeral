@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 function MasterRumneg() {
     const [data, setData] = useState([]);
@@ -226,6 +228,60 @@ function MasterRumneg() {
         XLSX.writeFile(wb, 'Template_Master_Rumneg.xlsx');
     };
 
+    const handleExportPDF = () => {
+        if (data.length === 0) {
+            alert('Tidak ada data untuk diexport');
+            return;
+        }
+
+        const doc = new jsPDF('l', 'mm', 'a4');
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const margin = 12;
+        let yPosition = margin + 15;
+
+        doc.setFontSize(16);
+        doc.setTextColor(0, 51, 102);
+        doc.text('LAPORAN MASTER DATA RUMAH NEGARA', margin, yPosition);
+        
+        yPosition += 10;
+        doc.setFontSize(10);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Tanggal: ${new Date().toLocaleDateString('id-ID')}`, margin, yPosition);
+        
+        yPosition += 10;
+        doc.setDrawColor(200, 200, 200);
+        doc.line(margin, yPosition, pageWidth - margin, yPosition);
+        yPosition += 8;
+
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        doc.text(`Total Data: ${data.length}`, margin, yPosition);
+        yPosition += 8;
+
+        const tableColumn = ['Nama Penghuni', 'Pangkat/Korps', 'Perumahan', 'Alamat', 'Status', 'No SIP'];
+        const tableRows = data.map(item => [
+            (item.occupant_name || '-').substring(0, 20),
+            (item.occupant_rank || '-').substring(0, 15),
+            (item.area || '-').substring(0, 20),
+            (item.alamat_detail || '-').substring(0, 25),
+            (item.status_penghuni || '-').substring(0, 15),
+            (item.no_sip || '-').substring(0, 15)
+        ]);
+
+        autoTable(doc, {
+            head: [tableColumn],
+            body: tableRows,
+            startY: yPosition,
+            margin: margin,
+            styles: { fontSize: 9, cellPadding: 3 },
+            headStyles: { fillColor: [0, 51, 102], textColor: 255, fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [245, 245, 245] },
+        });
+
+        doc.save(`Laporan_Master_Rumneg_${new Date().toISOString().split('T')[0]}.pdf`);
+        alert('✅ PDF berhasil diunduh!');
+    };
+
     const handleExportData = () => {
         if (data.length === 0) {
             alert('Tidak ada data untuk diexport');
@@ -417,6 +473,21 @@ function MasterRumneg() {
                         }}
                     >
                         📊 Export Excel
+                    </button>
+                    <button
+                        onClick={handleExportPDF}
+                        style={{
+                            padding: '8px 16px',
+                            background: '#f59e0b',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '0.875rem',
+                            fontWeight: '600'
+                        }}
+                    >
+                        📄 Export PDF
                     </button>
                     <button
                         onClick={downloadTemplate}

@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import * as XLSX from 'xlsx'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 // Font system modern
 const FONT_SYSTEM = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
@@ -282,6 +284,61 @@ function Faslabuh() {
     }
 
 
+
+    const handleExportPDF = () => {
+        if (data.length === 0) {
+            alert('Tidak ada data untuk diekspor');
+            return;
+        }
+
+        const doc = new jsPDF('l', 'mm', 'a4'); // landscape
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const margin = 12;
+        let yPosition = margin + 15;
+
+        // Header
+        doc.setFontSize(16);
+        doc.setTextColor(0, 51, 102);
+        doc.text('LAPORAN FASILITAS LABUH', margin, yPosition);
+        
+        yPosition += 10;
+        doc.setFontSize(10);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Tanggal: ${new Date().toLocaleDateString('id-ID')}`, margin, yPosition);
+        
+        yPosition += 10;
+        doc.setDrawColor(200, 200, 200);
+        doc.line(margin, yPosition, pageWidth - margin, yPosition);
+        yPosition += 8;
+
+        // Summary
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        doc.text(`Total Data: ${data.length}`, margin, yPosition);
+        yPosition += 8;
+
+        const tableColumn = ['Nama Dermaga', 'Provinsi', 'Wilayah', 'Lokasi', 'Kondisi (%)'];
+        const tableRows = data.map(item => [
+            (item.nama_dermaga || '-').substring(0, 30),
+            (item.provinsi || '-').substring(0, 20),
+            (item.wilayah || '-').substring(0, 20),
+            (item.lokasi || '-').substring(0, 25),
+            (item.kondisi_percent || '-')
+        ]);
+
+        autoTable(doc, {
+            head: [tableColumn],
+            body: tableRows,
+            startY: yPosition,
+            margin: margin,
+            styles: { fontSize: 9, cellPadding: 3 },
+            headStyles: { fillColor: [0, 51, 102], textColor: 255, fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [245, 245, 245] },
+        });
+
+        doc.save(`Laporan_Faslabuh_${new Date().toISOString().split('T')[0]}.pdf`);
+        alert('✅ PDF berhasil diunduh!');
+    };
 
     const handleExport = () => {
         const excelData = data.map(item => ({
@@ -892,6 +949,18 @@ function Faslabuh() {
                         fontFamily: FONT_SYSTEM
                     }}>
                         📤 Export
+                    </button>
+                    <button onClick={handleExportPDF} style={{
+                        background: '#f59e0b',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        padding: '6px 12px',
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        fontFamily: FONT_SYSTEM
+                    }}>
+                        📄 Cetak PDF
                     </button>
                     <button onClick={handleExportTemplate} style={{
                         background: '#10b981',

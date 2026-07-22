@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 function FastanahAssetUtama() {
     const [assets, setAssets] = useState([]);
@@ -451,7 +451,7 @@ function FastanahAssetUtama() {
             asset.status_sertifikasi
         ]);
 
-        doc.autoTable({
+        autoTable(doc, {
             head: [tableColumn],
             body: tableRows,
             startY: yPosition,
